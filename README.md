@@ -12,8 +12,6 @@ A lightweight, browser-based tool that scans webpages for common WCAG 2.2 access
 ## 🚀 Try It Live
 👉 [Click here to run the checker](https://c-hibbard.github.io/wcag-checker-tool/)
 
-*(Replace `yourusername` with your GitHub username)*
-
 ## 📦 Features
 - Runs instantly in the browser
 - No dependencies or external libraries
