@@ -1,48 +1,40 @@
 # 🧪 WCAG 2.2 Accessibility Checker
 
-A lightweight, browser-based tool that scans webpages for common WCAG 2.2 accessibility issues.  
-No install. No account. No fluff.
+A lightweight, browser-based tool that scans webpages for common WCAG 2.2 issues — no install, no account, no data leaves your browser.
 
-**Live Tool:** [wcag-checker-tool](https://c-hibbard.github.io/wcag-checker-tool/index.html)  
-**Run Demo Now:** [Demo Page](https://c-hibbard.github.io/wcag-checker-tool/index.html?demo=1&autorun=1)
+- **Live tool:** https://c-hibbard.github.io/wcag-checker-tool/index.html  
+- **Auto-run demo:** https://c-hibbard.github.io/wcag-checker-tool/index.html?demo=1&autorun=1
 
----
+![Demo GIF placeholder – replace with /assets/demo.gif](assets/demo.gif)
 
-## 🚀 How to Use
-
-### Option 1: Bookmarklet (Quickest)
-1. Open the [live tool page](https://c-hibbard.github.io/wcag-checker-tool/index.html).
-2. Drag the **Run Checker** button to your bookmarks bar.
-3. Click it on **any site** to scan that page instantly.
-
-### Option 2: Chrome Extension
-1. Download or clone this repository.
-2. Open **Chrome → Extensions → Manage Extensions**.
-3. Enable **Developer Mode**, click **Load unpacked**, and select this project folder.
-4. Click the extension icon in your toolbar to run the checker on the current page.
-
----
-
-## 🔍 What It Checks
-- ❌ Missing `alt` attributes on images
+## What It Checks
+- ❌ Images missing `alt`
 - ⚠️ Low contrast between text and background
-- ❌ Form inputs missing associated `<label>` elements
+- ❌ Form inputs missing associated `<label>`
 
----
+## Quick Start
 
-## 📦 Features
-- Works instantly in the browser
-- No dependencies or external libraries
-- Runs locally — no data leaves your browser
-- Built for developers, freelancers, and accessibility advocates
+### Option A — Bookmarklet (fastest)
+Right-click this button → **Bookmark link**. Then click it on any page:
 
----
+**Run Checker:**  
+[`Run on this page`](javascript:(()=>{try{window.__wcagCheckerLoaded?window.__wcagChecker.run():(()=>{const s=document.createElement('script');s.src='https://c-hibbard.github.io/wcag-checker-tool/dist/checker.min.js';s.onload=()=>{window.__wcagCheckerLoaded=true;window.__wcagChecker.run();};document.documentElement.appendChild(s)})()}catch(e){alert('WCAG Checker: failed to load. See console.');console.error(e);}})();)
 
-## 🛠️ How It Works
-The checker analyzes the page’s DOM and outputs a simple, readable report of issues.  
-It does **not** guarantee full WCAG compliance, but highlights the most common problems quickly.
+> If your Markdown viewer strips `javascript:` links, use the **Live tool** above and bookmark the **Run Checker** button there.
 
----
+### Option B — Browser Extension
+1. Clone this repo and build (see below), or use the prebuilt `extension/` folder.
+2. **Chrome/Edge:** `chrome://extensions` → Enable Developer Mode → **Load unpacked** → select `extension/`.
+3. Map a shortcut to “Run Checker” in browser settings (optional).
 
-## 📜 License
-MIT — free for personal and commercial use.
+## Build
+
+```bash
+# Install
+npm install
+
+# Build the core checker (outputs dist/checker.min.js)
+npm run build
+
+# Optional: generate README/index bookmarklet from dist/checker.min.js
+npm run make:bookmarklet
