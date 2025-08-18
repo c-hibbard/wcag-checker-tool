@@ -1,58 +1,48 @@
-🧪 WCAG 2.2 Accessibility Checker
+# 🧪 WCAG 2.2 Accessibility Checker
 
-A lightweight, browser-based tool that scans webpages for common WCAG 2.2 accessibility issues — no install, no account, no fluff.
+A lightweight, browser-based tool that scans webpages for common WCAG 2.2 accessibility issues.  
+No install. No account. No fluff.
 
-Live tool: https://c-hibbard.github.io/wcag-checker-tool/index.html
-Run demo now: https://c-hibbard.github.io/wcag-checker-tool/index.html?demo=1&autorun=1
+**Live Tool:** [wcag-checker-tool](https://c-hibbard.github.io/wcag-checker-tool/index.html)  
+**Run Demo Now:** [Demo Page](https://c-hibbard.github.io/wcag-checker-tool/index.html?demo=1&autorun=1)
 
-🔍 What It Checks
+---
 
-❌ Missing alt attributes on images
+## 🚀 How to Use
 
-⚠️ Low contrast between text and background
+### Option 1: Bookmarklet (Quickest)
+1. Open the [live tool page](https://c-hibbard.github.io/wcag-checker-tool/index.html).
+2. Drag the **Run Checker** button to your bookmarks bar.
+3. Click it on **any site** to scan that page instantly.
 
-❌ Form inputs missing associated <label> elements
+### Option 2: Chrome Extension
+1. Download or clone this repository.
+2. Open **Chrome → Extensions → Manage Extensions**.
+3. Enable **Developer Mode**, click **Load unpacked**, and select this project folder.
+4. Click the extension icon in your toolbar to run the checker on the current page.
 
-🚀 How to Use
-Option 1 — Bookmarklet (recommended for quick use)
+---
 
-Go to the live tool page.
+## 🔍 What It Checks
+- ❌ Missing `alt` attributes on images
+- ⚠️ Low contrast between text and background
+- ❌ Form inputs missing associated `<label>` elements
 
-Drag the “Run WCAG Checker” bookmarklet to your bookmarks bar.
+---
 
-Visit any website, click the bookmarklet, and a report will appear directly on the page.
+## 📦 Features
+- Works instantly in the browser
+- No dependencies or external libraries
+- Runs locally — no data leaves your browser
+- Built for developers, freelancers, and accessibility advocates
 
-👉 Great for one-off checks without installing anything.
+---
 
-Option 2 — Chrome Extension (Manifest V3)
+## 🛠️ How It Works
+The checker analyzes the page’s DOM and outputs a simple, readable report of issues.  
+It does **not** guarantee full WCAG compliance, but highlights the most common problems quickly.
 
-Clone or download this repo.
+---
 
-Open chrome://extensions/ in Chrome.
-
-Enable Developer Mode (top right).
-
-Click Load unpacked and select the project folder.
-
-Pin the extension, then click it on any page to run the checker.
-
-👉 Best for repeated testing, no bookmark bar required.
-
-📦 Features
-
-Runs instantly in the browser
-
-No dependencies or external libraries
-
-Works as a bookmarklet or Chrome extension
-
-Ideal for web developers, freelancers, and accessibility advocates
-
-🛠️ How It Works
-
-The checker analyzes the DOM and generates a simple, readable report of accessibility issues.
-Use it in demo mode to see example issues, or attach it to real sites via bookmarklet/extension.
-
-📜 License
-
+## 📜 License
 MIT — free for personal and commercial use.
