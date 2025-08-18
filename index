@@ -104,6 +104,38 @@
         ? '✅ No major issues found.'
         : report.join('\n');
     }
+  function insertDemoIssues() {
+    const badImg = document.createElement('img');
+    badImg.src = 'https://via.placeholder.com/100x60';
+    badImg.style.display = 'block';
+    badImg.style.marginTop = '16px';
+    document.body.appendChild(badImg);
+
+    const lc = document.createElement('div');
+    lc.textContent = 'This is low-contrast demo text';
+    lc.style.color = 'rgb(190,190,190)';
+    lc.style.backgroundColor = 'rgb(255,255,255)';
+    lc.style.margin = '12px 0';
+    document.body.appendChild(lc);
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Unlabeled input';
+    input.style.display = 'block';
+    document.body.appendChild(input);
+  }
+
+  // --- AUTORUN HANDLER ---
+  (function autorunIfRequested(){
+    const q = new URLSearchParams(location.search);
+    const shouldDemo = q.has('demo') && q.get('demo') !== '0';
+    const shouldAutorun = q.has('autorun') && q.get('autorun') !== '0';
+    if (shouldDemo) { try { insertDemoIssues(); } catch(e){} }
+    if (shouldAutorun && typeof runChecker === 'function') {
+      // Give the page a tick to render, then run
+      setTimeout(runChecker, 50);
+    }
+  })();
   </script>
 
 </body>
