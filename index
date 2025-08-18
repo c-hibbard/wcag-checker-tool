@@ -1,264 +1,99 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>WCAG 2.2 Accessibility Checker</title>
+  <meta name="description" content="Lightweight WCAG 2.2 checker you can run on any page—bookmarklet or browser extension." />
   <style>
+    :root { --max: 880px; }
     body {
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      background: #f7f8fa;
-      color: #1f2328;
-      max-width: 900px;
-      margin: 2rem auto;
-      padding: 1rem;
-      line-height: 1.55;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+      line-height: 1.5; margin: 0; color: #111;
+      -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
     }
-    h1 { color: #0a66c2; margin: 0 0 .25rem; }
-    .lead { color:#555; margin-top:0 }
-    .actions { display:flex; flex-wrap:wrap; gap:.5rem; margin: 1rem 0 0.75rem; }
-    button, .btn {
-      padding: .6rem .9rem; border: 1px solid #d0d7de; border-radius: 8px;
-      background:#fff; cursor:pointer; font-size:.95rem;
+    header, main, footer { max-width: var(--max); margin: 0 auto; padding: 1.25rem; }
+    header { padding-top: 2.25rem; }
+    h1 { font-size: clamp(1.6rem, 1.6rem + 1.4vw, 2.4rem); margin: 0 0 .5rem; }
+    .lede { color: #444; margin: 0 0 1rem; }
+    .cta-row { display: flex; gap: .75rem; flex-wrap: wrap; margin: 1rem 0 1.25rem; }
+    .btn, .link-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+      padding: .65rem .9rem; border-radius: .55rem; text-decoration: none; font-weight: 600;
+      border: 1px solid #ddd; background: #fff;
     }
-    button.primary { background:#0a66c2; color:#fff; border-color:#0a66c2; }
-    #report { margin-top: 1rem; white-space: pre-wrap; background: #fff; padding: 1rem;
-      border-radius: 10px; border: 1px solid #d0d7de; min-height: 72px; }
-    .muted { color:#6a737d; }
-    details { margin-top: .5rem; }
-    code { background:#eef2f6; padding:.1rem .3rem; border-radius:6px; }
-    .hr { height:1px; background:#e5e7eb; margin:1.25rem 0; }
-    .kbd { font: 12px/1 monospace; background:#eef; padding:2px 6px; border-radius:999px; }
+    .btn-primary { background: #111; color: #fff; border-color: #111; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .card {
+      border: 1px solid #e6e6e6; border-radius: .75rem; padding: 1rem; background: #fafafa;
+    }
+    footer { color: #555; }
+    .muted { color: #666; font-size: .95rem; }
+    .kbd { border: 1px solid #ccc; padding: .05rem .35rem; border-radius: .35rem; background:#f5f5f5; }
   </style>
 </head>
 <body>
-  <h1>🧪 WCAG 2.2 Accessibility Checker</h1>
-  <p class="lead">Scan this page for common accessibility issues. To scan any website, use the bookmarklet or Chrome extension below.</p>
+  <header>
+    <h1>WCAG 2.2 Accessibility Checker</h1>
+    <p class="lede">A tiny, browser-based tool that flags <strong>missing <code>alt</code></strong>, <strong>low contrast</strong>, and <strong>inputs without labels</strong>. No install. No data leaves your browser.</p>
 
-  <div class="actions">
-    <button id="runBtn" class="primary">Run Accessibility Check</button>
-    <button id="demoBtn">Insert Demo Issues</button>
-    <button id="copyBtn">Copy Report</button>
-    <button id="clearBtn">Clear Outlines</button>
-  </div>
+    <div class="cta-row" role="group" aria-label="Primary actions">
+      <!-- 1) Bookmarklet button (self-contained) -->
+      <a
+        class="btn btn-primary"
+        role="button"
+        id="run-checker-bookmarklet"
+        href="javascript:(()=>{try{window.__wcagCheckerLoaded?window.__wcagChecker.run():(()=>{const s=document.createElement('script');s.src='https://c-hibbard.github.io/wcag-checker-tool/dist/checker.min.js';s.onload=()=>{window.__wcagCheckerLoaded=true;window.__wcagChecker.run();};document.documentElement.appendChild(s)})()}catch(e){alert('WCAG Checker: failed to load. See console.');console.error(e);}})();"
+        aria-label="Run the WCAG checker on this page"
+      >Run Checker</a>
 
-  <div id="report" class="muted">Click <span class="kbd">Run Accessibility Check</span> to analyze this page.</div>
+      <!-- 2) Open the live tool page itself -->
+      <a class="btn link-btn" href="./index.html" aria-label="Open the checker app page">Open the checker</a>
 
-  <div class="hr"></div>
+      <!-- 3) Demo that auto-runs -->
+      <a class="btn link-btn" href="./index.html?demo=1&autorun=1" aria-label="Open demo page with checker auto-run">Run demo</a>
 
-  <h2>Use on any site</h2>
-  <p><strong>Bookmarklet:</strong> drag this to your bookmarks bar → 
-    <a id="bmLink" class="btn" href="#">WCAG 2.2 Checker</a>
-  </p>
-  <p><strong>Chrome extension (quick):</strong> Download two files (<code>manifest.json</code> and <code>content.js</code>) from this repo (or copy from README), then go to <code>chrome://extensions</code> → enable Developer Mode → Load unpacked → select the folder → click the extension on any site.</p>
+      <!-- 4) Repo -->
+      <a class="btn link-btn" href="https://github.com/c-hibbard/wcag-checker-tool" aria-label="Open GitHub repository">GitHub</a>
+    </div>
 
-  <script>
-    // -------------------- Utilities --------------------
-    const outlined = new WeakSet();
-    function outline(el, color='#d00') { try { el.style.outline = `2px solid ${color}`; el.style.outlineOffset='2px'; outlined.add(el); } catch {} }
-    function clearOutlines() { document.querySelectorAll('*').forEach(el => { if (outlined.has(el)) { el.style.outline=''; el.style.outlineOffset=''; } }); }
+    <p class="muted">Tip: Right-click “Run Checker” → <span class="kbd">Bookmark link</span> to create the bookmarklet.</p>
+    <noscript><p><strong>Enable JavaScript</strong> to run the checker.</p></noscript>
+  </header>
 
-    const isHidden = (el) => {
-      const cs = getComputedStyle(el);
-      if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) === 0) return true;
-      if (el.closest('[aria-hidden="true"]')) return true;
-      return false;
-    };
-    const hasVisibleText = (el) => {
-      if (!el || el.nodeType !== 1 || isHidden(el)) return false;
-      const tag = el.tagName.toLowerCase();
-      if (['script','style','noscript','svg','canvas','img','video','audio'].includes(tag)) return false;
-      return (el.textContent || '').replace(/\s+/g,' ').trim().length > 0;
-    };
-    const rgb = (s) => { if (!s || !s.startsWith('rgb')) return null; const a = s.match(/\d+(\.\d+)?/g); return (a && a.length >=3) ? [ +a[0], +a[1], +a[2] ] : null; };
-    const luminance = ([r,g,b]) => { const f=v=>{v/=255; return v<=.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4)}; return 0.2126*f(r)+0.7152*f(g)+0.0722*f(b) };
-    const contrastRatio = (fg, bg) => { const L1=luminance(fg), L2=luminance(bg); return (Math.max(L1,L2)+.05)/(Math.min(L1,L2)+.05) };
-    const effectiveBg = (el) => {
-      let cur = el;
-      while (cur && cur !== document.documentElement) {
-        const bg = getComputedStyle(cur).backgroundColor;
-        if (bg && bg.startsWith('rgb')) {
-          const a = bg.match(/\d+(\.\d+)?/g);
-          if (a && a.length >= 4 && Number(a[3]) === 0) { cur = cur.parentElement; continue; }
-          return rgb(bg);
-        }
-        cur = cur.parentElement;
-      }
-      const bodyBg = getComputedStyle(document.body).backgroundColor;
-      return rgb(bodyBg) || [255,255,255];
-    };
-    const cssSel = (el) => {
-      try {
-        const id = el.id ? `#${el.id}` : '';
-        const cls = (el.className && typeof el.className === 'string') ? '.' + el.className.trim().split(/\s+/).slice(0,2).join('.') : '';
-        return `${el.tagName.toLowerCase()}${id}${cls}`;
-      } catch { return el.tagName.toLowerCase(); }
-    };
+  <main>
+    <section class="card" aria-labelledby="howto">
+      <h2 id="howto">How to use</h2>
+      <ol>
+        <li><strong>Bookmark the “Run Checker” button</strong> above (right-click → Bookmark link).</li>
+        <li>Navigate to any site and click your bookmark to scan.</li>
+        <li>Or open the demo link and it’ll auto-run.</li>
+      </ol>
+      <p class="muted">Nothing is uploaded. All analysis runs locally in your browser.</p>
+    </section>
 
-    // -------------------- Checker --------------------
-    function runChecker() {
-      const missingAlt = [];
-      const emptyAlt = [];
-      const missingLabel = [];
-      const lowContrast = [];
+    <section aria-labelledby="whatchecks">
+      <h2 id="whatchecks">What it checks</h2>
+      <ul>
+        <li>Images missing <code>alt</code></li>
+        <li>Low text/background contrast</li>
+        <li>Inputs without associated labels</li>
+      </ul>
+    </section>
 
-      // 1) Images: missing/empty alt (skip decorative)
-      document.querySelectorAll('img').forEach(img => {
-        if (isHidden(img)) return;
-        const role = (img.getAttribute('role') || '').toLowerCase();
-        const ariaHidden = img.getAttribute('aria-hidden') === 'true';
-        const decorative = (role === 'presentation') || ariaHidden;
+    <section aria-labelledby="ext">
+      <h2 id="ext">Prefer an extension?</h2>
+      <p>Load the extension for Chrome/Edge/Firefox (unpacked or store build) and map a keyboard shortcut to trigger checks on any page.</p>
+    </section>
+  </main>
 
-        const alt = img.getAttribute('alt');
-        if (alt === null) { missingAlt.push(img); outline(img,'#c00'); }
-        else if (alt.trim() === '' && !decorative) { emptyAlt.push(img); outline(img,'#b36b00'); }
-      });
-
-      // 2) Contrast: 4.5:1 normal, 3:1 large/bold
-      const seenText = new WeakSet();
-      document.querySelectorAll('body *').forEach(el => {
-        if (!hasVisibleText(el)) return;
-        if (seenText.has(el)) return;
-        const cs = getComputedStyle(el);
-        const fg = rgb(cs.color); if (!fg) return;
-        const bg = effectiveBg(el); if (!bg) return;
-
-        const size = parseFloat(cs.fontSize) || 16;
-        const isBold = (parseInt(cs.fontWeight,10) || 400) >= 700;
-        const isLarge = size >= 24 || (isBold && size >= 19.2);
-        const threshold = isLarge ? 3.0 : 4.5;
-
-        const r = contrastRatio(fg, bg);
-        if (r < threshold) { lowContrast.push({ el, r, threshold }); outline(el,'#b36b00'); seenText.add(el); }
-      });
-
-      // 3) Form controls: accessible label (for=ID, wrapping <label>, aria-* )
-      document.querySelectorAll('input,textarea,select').forEach(el => {
-        if (isHidden(el)) return;
-        const type = (el.getAttribute('type') || '').toLowerCase();
-        if (['hidden','button','submit','reset','image'].includes(type)) return;
-
-        let labeled = false;
-        const id = el.id;
-        if (id && document.querySelector(`label[for="${CSS.escape(id)}"]`)) labeled = true;
-        if (!labeled && el.closest('label')) labeled = true;
-        if (!labeled) {
-          const ariaLabel = (el.getAttribute('aria-label') || '').trim();
-          if (ariaLabel) labeled = true;
-        }
-        if (!labeled) {
-          const labelledby = (el.getAttribute('aria-labelledby') || '').trim();
-          if (labelledby) {
-            const text = labelledby.split(/\s+/).map(id => (document.getElementById(id)?.textContent || '').trim()).join(' ');
-            if (text.length) labeled = true;
-          }
-        }
-        if (!labeled) { missingLabel.push(el); outline(el,'#c00'); }
-      });
-
-      // ----- Build summary + optional details -----
-      const lines = [];
-      const ex = (arr) => arr.slice(0,5).map(x => '  • ' + (x.msg || cssSel(x.el || x)));
-
-      lines.push(`❌ Images missing alt: ${missingAlt.length}`);
-      if (missingAlt.length) lines.push(...ex(missingAlt));
-
-      lines.push(`⚠️ Images with empty alt (verify decorative): ${emptyAlt.length}`);
-      if (emptyAlt.length) lines.push(...ex(emptyAlt));
-
-      lines.push(`❌ Inputs missing accessible label: ${missingLabel.length}`);
-      if (missingLabel.length) lines.push(...ex(missingLabel));
-
-      lines.push(`⚠️ Low-contrast text blocks: ${lowContrast.length}`);
-      if (lowContrast.length) {
-        lines.push(...lowContrast.slice(0,5).map(o => `  • ${cssSel(o.el)} contrast ${o.r.toFixed(2)}:1 (needs ≥ ${o.threshold}:1)`));
-      }
-
-      const summary = lines.join('\n');
-      const reportDiv = document.getElementById('report');
-      reportDiv.classList.remove('muted');
-      reportDiv.textContent = summary || '✅ No major issues found.';
-
-      // Add details toggle (full list)
-      const det = document.createElement('details');
-      const sum = document.createElement('summary');
-      sum.textContent = 'Show all details';
-      det.appendChild(sum);
-      const full = document.createElement('pre');
-      const allLines = [];
-
-      missingAlt.forEach(el => allLines.push('❌ ' + cssSel(el) + ' missing alt'));
-      emptyAlt.forEach(el => allLines.push('⚠️ ' + cssSel(el) + ' empty alt'));
-      missingLabel.forEach(el => allLines.push('❌ ' + cssSel(el) + ' missing accessible label'));
-      lowContrast.forEach(o => allLines.push(`⚠️ ${cssSel(o.el)} contrast ${o.r.toFixed(2)}:1 (needs ≥ ${o.threshold}:1)`));
-
-      full.textContent = allLines.join('\n') || 'No details.';
-      det.appendChild(full);
-      reportDiv.appendChild(det);
-    }
-
-    // -------------------- Buttons --------------------
-    document.getElementById('runBtn').addEventListener('click', (e) => { e.preventDefault(); runChecker(); });
-    document.getElementById('demoBtn').addEventListener('click', (e) => {
-      e.preventDefault();
-      // Insert demo issues (network-free)
-      const dot = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHlQJ7Z0xYrQAAAABJRU5ErkJggg==";
-      const img=document.createElement('img'); img.src=dot; img.style.display='block'; img.style.marginTop='16px'; document.body.appendChild(img);
-      const lc=document.createElement('div'); lc.textContent='This is low-contrast demo text'; lc.style.color='rgb(190,190,190)'; lc.style.backgroundColor='rgb(255,255,255)'; lc.style.margin='12px 0'; document.body.appendChild(lc);
-      const input=document.createElement('input'); input.type='text'; input.placeholder='Unlabeled input'; input.style.display='block'; document.body.appendChild(input);
-      const reportDiv=document.getElementById('report'); reportDiv.classList.add('muted'); reportDiv.textContent='Demo elements inserted. Click “Run Accessibility Check”.';
-    });
-    document.getElementById('copyBtn').addEventListener('click', async (e) => {
-      e.preventDefault();
-      const txt = document.getElementById('report').innerText || '';
-      try { await navigator.clipboard.writeText(txt); alert('Report copied to clipboard.'); } catch { alert('Could not copy. Select text and copy manually.'); }
-    });
-    document.getElementById('clearBtn').addEventListener('click', (e) => { e.preventDefault(); clearOutlines(); });
-
-    // -------------------- Bookmarklet link --------------------
-    (function setBookmarklet(){
-      // Same core as runChecker, injected on any site
-      const code = `
-        (()=>{try{
-          if(window.__WCAG_CHECKER_RUNNING__)return;window.__WCAG_CHECKER_RUNNING__=true;
-          const outlined=new WeakSet();const outline=(el,c)=>{try{el.style.outline='2px solid '+c;el.style.outlineOffset='2px';outlined.add(el);}catch{}};
-          const isHidden=(el)=>{const cs=getComputedStyle(el);if(cs.display==='none'||cs.visibility==='hidden'||Number(cs.opacity)===0)return true;if(el.closest('[aria-hidden="true"]'))return true;return false};
-          const hasText=(el)=>{if(!el||el.nodeType!==1||isHidden(el))return false;const t=(el.textContent||'').replace(/\\s+/g,' ').trim();return t.length>0};
-          const rgb=(s)=>{if(!s||!s.startsWith('rgb'))return null;const a=s.match(/\\d+(\\.\\d+)?/g);return a&&a.length>=3?[+a[0],+a[1],+a[2]]:null};
-          const lum=([r,g,b])=>{const f=v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4)};return .2126*f(r)+.7152*f(g)+.0722*f(b)};
-          const ratio=(fg,bg)=>{const L1=lum(fg),L2=lum(bg);return (Math.max(L1,L2)+.05)/(Math.min(L1,L2)+.05)};
-          const bgOf=(el)=>{let cur=el;while(cur&&cur!==document.documentElement){const bg=getComputedStyle(cur).backgroundColor;if(bg&&bg.startsWith('rgb')){const a=bg.match(/\\d+(\\.\\d+)?/g);if(a&&a.length>=4&&+a[3]===0){cur=cur.parentElement;continue}return rgb(bg)}cur=cur.parentElement}const body=getComputedStyle(document.body).backgroundColor;return rgb(body)||[255,255,255]};
-          const cssSel=(el)=>{try{const id=el.id?('#'+el.id):'';const cls=(el.className&&typeof el.className==='string')?('.'+el.className.trim().split(/\\s+/).slice(0,2).join('.')):'';return el.tagName.toLowerCase()+id+cls;}catch{return el.tagName.toLowerCase()}};
-          const issues={missingAlt:[],emptyAlt:[],missingLabel:[],lowContrast:[]};
-          document.querySelectorAll('img').forEach(img=>{if(isHidden(img))return;const role=(img.getAttribute('role')||'').toLowerCase();const ah=img.getAttribute('aria-hidden')==='true';const deco=(role==='presentation')||ah;const alt=img.getAttribute('alt');if(alt===null){issues.missingAlt.push(img);outline(img,'#c00')}else if(alt.trim()===''&&!deco){issues.emptyAlt.push(img);outline(img,'#b36b00')}});
-          const seen=new WeakSet();
-          document.querySelectorAll('body *').forEach(el=>{if(!hasText(el))return;if(seen.has(el))return;const cs=getComputedStyle(el);const fg=rgb(cs.color);if(!fg)return;const bg=bgOf(el);if(!bg)return;const size=parseFloat(cs.fontSize)||16;const bold=(parseInt(cs.fontWeight,10)||400)>=700;const large=size>=24||(bold&&size>=19.2);const thr=large?3.0:4.5;const r=ratio(fg,bg);if(r<thr){issues.lowContrast.push({el,r,thr});outline(el,'#b36b00');seen.add(el)}});
-          document.querySelectorAll('input,textarea,select').forEach(el=>{if(isHidden(el))return;const type=(el.getAttribute('type')||'').toLowerCase();if(['hidden','button','submit','reset','image'].includes(type))return;let ok=false;const id=el.id;if(id&&document.querySelector('label[for=\"'+CSS.escape(id)+'\"]'))ok=true;else if(el.closest('label'))ok=true;else if((el.getAttribute('aria-label')||'').trim())ok=true;else{const ll=(el.getAttribute('aria-labelledby')||'').trim();if(ll){const t=ll.split(/\\s+/).map(i=>(document.getElementById(i)?.textContent||'').trim()).join(' ');if(t.length)ok=true}}if(!ok){issues.missingLabel.push(el);outline(el,'#c00')}});
-          const ex=(arr)=>arr.slice(0,5).map(x=>'  • '+(x.msg||cssSel(x.el||x)));
-          const lines=[];lines.push('❌ Images missing alt: '+issues.missingAlt.length);if(issues.missingAlt.length)lines.push(...ex(issues.missingAlt));
-          lines.push('⚠️ Images with empty alt (verify decorative): '+issues.emptyAlt.length);if(issues.emptyAlt.length)lines.push(...ex(issues.emptyAlt));
-          lines.push('❌ Inputs missing accessible label: '+issues.missingLabel.length);if(issues.missingLabel.length)lines.push(...ex(issues.missingLabel));
-          lines.push('⚠️ Low-contrast text blocks: '+issues.lowContrast.length);if(issues.lowContrast.length)lines.push(...issues.lowContrast.slice(0,5).map(o=>'  • '+cssSel(o.el)+' contrast '+o.r.toFixed(2)+':1 (needs ≥ '+o.thr+':1)'));
-          const out=lines.join('\\n')||'✅ No major issues found.';
-          let box=document.getElementById('__wcag_box__');if(!box){box=document.createElement('div');box.id='__wcag_box__';box.style.cssText='position:fixed;inset:auto 12px 12px auto;max-width:480px;background:#fff;border:1px solid #e2e4e8;border-radius:8px;padding:10px 12px;box-shadow:0 6px 18px rgba(0,0,0,.12);z-index:999999;font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;white-space:pre-wrap;';document.body.appendChild(box)}
-          box.textContent=out;box.title='WCAG 2.2 quick report';
-          setTimeout(()=>{window.__WCAG_CHECKER_RUNNING__=false;},50);
-        }catch(e){alert('WCAG checker error: '+(e&&e.message?e.message:e))}})();
-      `;
-      const href = 'javascript:' + encodeURIComponent(code);
-      const a = document.getElementById('bmLink');
-      a.setAttribute('href', href);
-      a.setAttribute('title', 'Drag this to your bookmarks bar, then click it on any site');
-    })();
-
-    // -------------------- Autorun (?demo=1&autorun=1) --------------------
-    (function autorunIfRequested() {
-      const q = new URLSearchParams(location.search);
-      const shouldDemo = q.has('demo') && q.get('demo') !== '0';
-      const shouldAutorun = q.has('autorun') && q.get('autorun') !== '0';
-      if (shouldDemo) document.getElementById('demoBtn').click();
-      if (shouldAutorun) setTimeout(() => document.getElementById('runBtn').click(), 50);
-    })();
-  </script>
+  <footer>
+    <p>
+      <a href="https://github.com/c-hibbard/wcag-checker-tool">Improve this page</a> •
+      <a href="./privacy.html">Privacy</a>
+    </p>
+    <p class="muted">© <span id="y"></span> WCAG Checker</p>
+    <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
+  </footer>
 </body>
 </html>
