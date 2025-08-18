@@ -1,21 +1,13 @@
-MIT License
 
-Copyright (c) 2025 c-hibbard
+---
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+## Optional: auto-generate the bookmarklet (so you never hand-paste)
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+**`scripts/make-bookmarklet.js`**
+```js
+// Simple builder that wraps dist/checker.min.js into a self-loader bookmarklet
+// Usage: node scripts/make-bookmarklet.js
+import { readFileSync, writeFileSync } from "node:fs";
+const loader = `javascript:(()=>{try{window.__wcagCheckerLoaded?window.__wcagChecker.run():(()=>{const s=document.createElement('script');s.src='https://c-hibbard.github.io/wcag-checker-tool/dist/checker.min.js';s.onload=()=>{window.__wcagCheckerLoaded=true;window.__wcagChecker.run();};document.documentElement.appendChild(s)})()}catch(e){alert('WCAG Checker: failed to load. See console.');console.error(e);}})();`;
+writeFileSync("dist/bookmarklet.txt", loader);
+console.log("Bookmarklet written to dist/bookmarklet.txt");
