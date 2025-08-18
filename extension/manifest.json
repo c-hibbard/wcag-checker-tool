@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "WCAG Checker",
+  "description": "Run a quick WCAG check (alt text, labels, contrast) on the current page.",
+  "version": "0.3.0",
+  "action": {
+    "default_title": "Run WCAG Checker"
+  },
+  "permissions": ["scripting", "activeTab"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "commands": {
+    "run-checker": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y",
+        "mac": "Command+Shift+Y"
+      },
+      "description": "Run WCAG Checker on the current page"
+    }
+  },
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  }
+}
