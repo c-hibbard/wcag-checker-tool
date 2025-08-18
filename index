@@ -13,9 +13,7 @@
       margin: 2rem auto;
       padding: 1rem;
     }
-    h1 {
-      color: #0077cc;
-    }
+    h1 { color: #0077cc; }
     button {
       padding: 0.75rem 1.5rem;
       font-size: 1rem;
@@ -33,6 +31,7 @@
       padding: 1rem;
       border-radius: 5px;
       border: 1px solid #ccc;
+      min-height: 64px;
     }
   </style>
 </head>
@@ -46,15 +45,15 @@
     <li>Unlabeled form inputs</li>
   </ul>
 
-  <button onclick="runChecker()">Run Accessibility Check</button>
-
-  <div id="report"></div>
+  <button id="runBtn">Run the Checker</button>
+  <div id="report">Click “Run the Checker” to analyze this page.</div>
 
   <script>
+    // ---------- Core checker ----------
     function runChecker() {
       const report = [];
       const reportDiv = document.getElementById('report');
-      reportDiv.innerHTML = 'Running checks...';
+      reportDiv.textContent = 'Running checks...';
 
       // Check 1: Missing alt attributes
       document.querySelectorAll('img').forEach(img => {
@@ -71,7 +70,6 @@
         });
         return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
       }
-
       function contrastRatio(fg, bg) {
         return (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05);
       }
@@ -81,7 +79,7 @@
         const color = style.color;
         const bg = style.backgroundColor;
 
-        if (color.startsWith('rgb') && bg.startsWith('rgb')) {
+        if (color && bg && color.startsWith('rgb') && bg.startsWith('rgb')) {
           const fgRGB = color.match(/\d+/g).map(Number);
           const bgRGB = bg.match(/\d+/g).map(Number);
           const ratio = contrastRatio(getLuminance(...fgRGB), getLuminance(...bgRGB));
@@ -100,43 +98,47 @@
       });
 
       // Show report
-      reportDiv.innerHTML = report.length === 0
+      reportDiv.textContent = report.length === 0
         ? '✅ No major issues found.'
         : report.join('\n');
     }
-  function insertDemoIssues() {
-    const badImg = document.createElement('img');
-    badImg.src = 'https://via.placeholder.com/100x60';
-    badImg.style.display = 'block';
-    badImg.style.marginTop = '16px';
-    document.body.appendChild(badImg);
 
-    const lc = document.createElement('div');
-    lc.textContent = 'This is low-contrast demo text';
-    lc.style.color = 'rgb(190,190,190)';
-    lc.style.backgroundColor = 'rgb(255,255,255)';
-    lc.style.margin = '12px 0';
-    document.body.appendChild(lc);
+    // ---------- Optional: demo injector (referenced by autorun ?demo) ----------
+    function insertDemoIssues() {
+      const badImg = document.createElement('img');
+      badImg.src = 'https://via.placeholder.com/100x60';
+      badImg.style.display = 'block';
+      badImg.style.marginTop = '16px';
+      document.body.appendChild(badImg);
 
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.placeholder = 'Unlabeled input';
-    input.style.display = 'block';
-    document.body.appendChild(input);
-  }
+      const lc = document.createElement('div');
+      lc.textContent = 'This is low-contrast demo text';
+      lc.style.color = 'rgb(190,190,190)';
+      lc.style.backgroundColor = 'rgb(255,255,255)';
+      lc.style.margin = '12px 0';
+      document.body.appendChild(lc);
 
-  // --- AUTORUN HANDLER ---
-  (function autorunIfRequested(){
-    const q = new URLSearchParams(location.search);
-    const shouldDemo = q.has('demo') && q.get('demo') !== '0';
-    const shouldAutorun = q.has('autorun') && q.get('autorun') !== '0';
-    if (shouldDemo) { try { insertDemoIssues(); } catch(e){} }
-    if (shouldAutorun && typeof runChecker === 'function') {
-      // Give the page a tick to render, then run
-      setTimeout(runChecker, 50);
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = 'Unlabeled input';
+      input.style.display = 'block';
+      document.body.appendChild(input);
     }
-  })();
-  </script>
 
+    // ---------- Wire up the button ----------
+    document.getElementById('runBtn').addEventListener('click', function (e) {
+      e.preventDefault();
+      runChecker();
+    });
+
+    // ---------- Autorun support: ?autorun=1 (& optional ?demo=1) ----------
+    (function autorunIfRequested(){
+      const q = new URLSearchParams(location.search);
+      const shouldDemo = q.has('demo') && q.get('demo') !== '0';
+      const shouldAutorun = q.has('autorun') && q.get('autorun') !== '0';
+      if (shouldDemo) { try { insertDemoIssues(); } catch(e){} }
+      if (shouldAutorun) { setTimeout(runChecker, 50); }
+    })();
+  </script>
 </body>
 </html>
