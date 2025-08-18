@@ -6,140 +6,258 @@
   <title>WCAG 2.2 Accessibility Checker</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f8f9fa;
-      color: #222;
-      max-width: 800px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: #f7f8fa;
+      color: #1f2328;
+      max-width: 900px;
       margin: 2rem auto;
       padding: 1rem;
+      line-height: 1.55;
     }
-    h1 { color: #0077cc; }
-    button {
-      padding: 0.75rem 1.5rem;
-      font-size: 1rem;
-      margin-top: 1rem;
-      cursor: pointer;
-      background-color: #0077cc;
-      color: white;
-      border: none;
-      border-radius: 4px;
+    h1 { color: #0a66c2; margin: 0 0 .25rem; }
+    .lead { color:#555; margin-top:0 }
+    .actions { display:flex; flex-wrap:wrap; gap:.5rem; margin: 1rem 0 0.75rem; }
+    button, .btn {
+      padding: .6rem .9rem; border: 1px solid #d0d7de; border-radius: 8px;
+      background:#fff; cursor:pointer; font-size:.95rem;
     }
-    #report {
-      margin-top: 2rem;
-      white-space: pre-wrap;
-      background: #fff;
-      padding: 1rem;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      min-height: 64px;
-    }
+    button.primary { background:#0a66c2; color:#fff; border-color:#0a66c2; }
+    #report { margin-top: 1rem; white-space: pre-wrap; background: #fff; padding: 1rem;
+      border-radius: 10px; border: 1px solid #d0d7de; min-height: 72px; }
+    .muted { color:#6a737d; }
+    details { margin-top: .5rem; }
+    code { background:#eef2f6; padding:.1rem .3rem; border-radius:6px; }
+    .hr { height:1px; background:#e5e7eb; margin:1.25rem 0; }
+    .kbd { font: 12px/1 monospace; background:#eef; padding:2px 6px; border-radius:999px; }
   </style>
 </head>
 <body>
-
   <h1>🧪 WCAG 2.2 Accessibility Checker</h1>
-  <p>This simple tool scans the current webpage for common WCAG 2.2 issues:</p>
-  <ul>
-    <li>Missing <code>alt</code> attributes on images</li>
-    <li>Low contrast text</li>
-    <li>Unlabeled form inputs</li>
-  </ul>
+  <p class="lead">Scan this page for common accessibility issues. To scan any website, use the bookmarklet or Chrome extension below.</p>
 
-  <button id="runLink">Run the Checker</button>
-  <div id="report">Click “Run the Checker” to analyze this page.</div>
+  <div class="actions">
+    <button id="runBtn" class="primary">Run Accessibility Check</button>
+    <button id="demoBtn">Insert Demo Issues</button>
+    <button id="copyBtn">Copy Report</button>
+    <button id="clearBtn">Clear Outlines</button>
+  </div>
+
+  <div id="report" class="muted">Click <span class="kbd">Run Accessibility Check</span> to analyze this page.</div>
+
+  <div class="hr"></div>
+
+  <h2>Use on any site</h2>
+  <p><strong>Bookmarklet:</strong> drag this to your bookmarks bar → 
+    <a id="bmLink" class="btn" href="#">WCAG 2.2 Checker</a>
+  </p>
+  <p><strong>Chrome extension (quick):</strong> Download two files (<code>manifest.json</code> and <code>content.js</code>) from this repo (or copy from README), then go to <code>chrome://extensions</code> → enable Developer Mode → Load unpacked → select the folder → click the extension on any site.</p>
 
   <script>
-    // ---------- Core checker ----------
-    function runChecker() {
-      const report = [];
-      const reportDiv = document.getElementById('report');
-      reportDiv.textContent = 'Running checks...';
+    // -------------------- Utilities --------------------
+    const outlined = new WeakSet();
+    function outline(el, color='#d00') { try { el.style.outline = `2px solid ${color}`; el.style.outlineOffset='2px'; outlined.add(el); } catch {} }
+    function clearOutlines() { document.querySelectorAll('*').forEach(el => { if (outlined.has(el)) { el.style.outline=''; el.style.outlineOffset=''; } }); }
 
-      // Check 1: Missing alt attributes
-      document.querySelectorAll('img').forEach(img => {
-        if (!img.hasAttribute('alt') || img.getAttribute('alt').trim() === '') {
-          report.push('❌ Missing alt attribute on an image.');
+    const isHidden = (el) => {
+      const cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) === 0) return true;
+      if (el.closest('[aria-hidden="true"]')) return true;
+      return false;
+    };
+    const hasVisibleText = (el) => {
+      if (!el || el.nodeType !== 1 || isHidden(el)) return false;
+      const tag = el.tagName.toLowerCase();
+      if (['script','style','noscript','svg','canvas','img','video','audio'].includes(tag)) return false;
+      return (el.textContent || '').replace(/\s+/g,' ').trim().length > 0;
+    };
+    const rgb = (s) => { if (!s || !s.startsWith('rgb')) return null; const a = s.match(/\d+(\.\d+)?/g); return (a && a.length >=3) ? [ +a[0], +a[1], +a[2] ] : null; };
+    const luminance = ([r,g,b]) => { const f=v=>{v/=255; return v<=.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4)}; return 0.2126*f(r)+0.7152*f(g)+0.0722*f(b) };
+    const contrastRatio = (fg, bg) => { const L1=luminance(fg), L2=luminance(bg); return (Math.max(L1,L2)+.05)/(Math.min(L1,L2)+.05) };
+    const effectiveBg = (el) => {
+      let cur = el;
+      while (cur && cur !== document.documentElement) {
+        const bg = getComputedStyle(cur).backgroundColor;
+        if (bg && bg.startsWith('rgb')) {
+          const a = bg.match(/\d+(\.\d+)?/g);
+          if (a && a.length >= 4 && Number(a[3]) === 0) { cur = cur.parentElement; continue; }
+          return rgb(bg);
         }
+        cur = cur.parentElement;
+      }
+      const bodyBg = getComputedStyle(document.body).backgroundColor;
+      return rgb(bodyBg) || [255,255,255];
+    };
+    const cssSel = (el) => {
+      try {
+        const id = el.id ? `#${el.id}` : '';
+        const cls = (el.className && typeof el.className === 'string') ? '.' + el.className.trim().split(/\s+/).slice(0,2).join('.') : '';
+        return `${el.tagName.toLowerCase()}${id}${cls}`;
+      } catch { return el.tagName.toLowerCase(); }
+    };
+
+    // -------------------- Checker --------------------
+    function runChecker() {
+      const missingAlt = [];
+      const emptyAlt = [];
+      const missingLabel = [];
+      const lowContrast = [];
+
+      // 1) Images: missing/empty alt (skip decorative)
+      document.querySelectorAll('img').forEach(img => {
+        if (isHidden(img)) return;
+        const role = (img.getAttribute('role') || '').toLowerCase();
+        const ariaHidden = img.getAttribute('aria-hidden') === 'true';
+        const decorative = (role === 'presentation') || ariaHidden;
+
+        const alt = img.getAttribute('alt');
+        if (alt === null) { missingAlt.push(img); outline(img,'#c00'); }
+        else if (alt.trim() === '' && !decorative) { emptyAlt.push(img); outline(img,'#b36b00'); }
       });
 
-      // Check 2: Low contrast text
-      function getLuminance(r, g, b) {
-        const a = [r, g, b].map(v => {
-          v /= 255;
-          return v <= 0.03928 ? v / 12.92 : Math.pow(((v + 0.055) / 1.055), 2.4);
-        });
-        return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
-      }
-      function contrastRatio(fg, bg) {
-        return (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05);
-      }
+      // 2) Contrast: 4.5:1 normal, 3:1 large/bold
+      const seenText = new WeakSet();
+      document.querySelectorAll('body *').forEach(el => {
+        if (!hasVisibleText(el)) return;
+        if (seenText.has(el)) return;
+        const cs = getComputedStyle(el);
+        const fg = rgb(cs.color); if (!fg) return;
+        const bg = effectiveBg(el); if (!bg) return;
 
-      document.querySelectorAll('*').forEach(el => {
-        const style = window.getComputedStyle(el);
-        const color = style.color;
-        const bg = style.backgroundColor;
+        const size = parseFloat(cs.fontSize) || 16;
+        const isBold = (parseInt(cs.fontWeight,10) || 400) >= 700;
+        const isLarge = size >= 24 || (isBold && size >= 19.2);
+        const threshold = isLarge ? 3.0 : 4.5;
 
-        if (color && bg && color.startsWith('rgb') && bg.startsWith('rgb')) {
-          const fgRGB = color.match(/\d+/g).map(Number);
-          const bgRGB = bg.match(/\d+/g).map(Number);
-          const ratio = contrastRatio(getLuminance(...fgRGB), getLuminance(...bgRGB));
-          if (ratio < 4.5) {
-            report.push(`⚠️ Low contrast text (ratio: ${ratio.toFixed(2)}:1).`);
+        const r = contrastRatio(fg, bg);
+        if (r < threshold) { lowContrast.push({ el, r, threshold }); outline(el,'#b36b00'); seenText.add(el); }
+      });
+
+      // 3) Form controls: accessible label (for=ID, wrapping <label>, aria-* )
+      document.querySelectorAll('input,textarea,select').forEach(el => {
+        if (isHidden(el)) return;
+        const type = (el.getAttribute('type') || '').toLowerCase();
+        if (['hidden','button','submit','reset','image'].includes(type)) return;
+
+        let labeled = false;
+        const id = el.id;
+        if (id && document.querySelector(`label[for="${CSS.escape(id)}"]`)) labeled = true;
+        if (!labeled && el.closest('label')) labeled = true;
+        if (!labeled) {
+          const ariaLabel = (el.getAttribute('aria-label') || '').trim();
+          if (ariaLabel) labeled = true;
+        }
+        if (!labeled) {
+          const labelledby = (el.getAttribute('aria-labelledby') || '').trim();
+          if (labelledby) {
+            const text = labelledby.split(/\s+/).map(id => (document.getElementById(id)?.textContent || '').trim()).join(' ');
+            if (text.length) labeled = true;
           }
         }
+        if (!labeled) { missingLabel.push(el); outline(el,'#c00'); }
       });
 
-      // Check 3: Missing labels (also detects wrapping <label>)
-      document.querySelectorAll('input, textarea, select').forEach(el => {
-        const id = el.id;
-        const hasForLabel = id && document.querySelector(`label[for='${id}']`);
-        const hasWrappingLabel = el.closest('label');
-        if (!hasForLabel && !hasWrappingLabel) {
-          report.push('❌ Form input missing associated <label>.');
-        }
-      });
+      // ----- Build summary + optional details -----
+      const lines = [];
+      const ex = (arr) => arr.slice(0,5).map(x => '  • ' + (x.msg || cssSel(x.el || x)));
 
-      // Show report
-      reportDiv.textContent = report.length === 0
-        ? '✅ No major issues found.'
-        : report.join('\n');
+      lines.push(`❌ Images missing alt: ${missingAlt.length}`);
+      if (missingAlt.length) lines.push(...ex(missingAlt));
+
+      lines.push(`⚠️ Images with empty alt (verify decorative): ${emptyAlt.length}`);
+      if (emptyAlt.length) lines.push(...ex(emptyAlt));
+
+      lines.push(`❌ Inputs missing accessible label: ${missingLabel.length}`);
+      if (missingLabel.length) lines.push(...ex(missingLabel));
+
+      lines.push(`⚠️ Low-contrast text blocks: ${lowContrast.length}`);
+      if (lowContrast.length) {
+        lines.push(...lowContrast.slice(0,5).map(o => `  • ${cssSel(o.el)} contrast ${o.r.toFixed(2)}:1 (needs ≥ ${o.threshold}:1)`));
+      }
+
+      const summary = lines.join('\n');
+      const reportDiv = document.getElementById('report');
+      reportDiv.classList.remove('muted');
+      reportDiv.textContent = summary || '✅ No major issues found.';
+
+      // Add details toggle (full list)
+      const det = document.createElement('details');
+      const sum = document.createElement('summary');
+      sum.textContent = 'Show all details';
+      det.appendChild(sum);
+      const full = document.createElement('pre');
+      const allLines = [];
+
+      missingAlt.forEach(el => allLines.push('❌ ' + cssSel(el) + ' missing alt'));
+      emptyAlt.forEach(el => allLines.push('⚠️ ' + cssSel(el) + ' empty alt'));
+      missingLabel.forEach(el => allLines.push('❌ ' + cssSel(el) + ' missing accessible label'));
+      lowContrast.forEach(o => allLines.push(`⚠️ ${cssSel(o.el)} contrast ${o.r.toFixed(2)}:1 (needs ≥ ${o.threshold}:1)`));
+
+      full.textContent = allLines.join('\n') || 'No details.';
+      det.appendChild(full);
+      reportDiv.appendChild(det);
     }
 
-    // ---------- Wire up the button (once) ----------
-    // IMPORTANT: run *outside* runChecker(), and target the correct id
-    document.getElementById('runLink').addEventListener('click', function (e) {
+    // -------------------- Buttons --------------------
+    document.getElementById('runBtn').addEventListener('click', (e) => { e.preventDefault(); runChecker(); });
+    document.getElementById('demoBtn').addEventListener('click', (e) => {
       e.preventDefault();
-      runChecker();
+      // Insert demo issues (network-free)
+      const dot = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHlQJ7Z0xYrQAAAABJRU5ErkJggg==";
+      const img=document.createElement('img'); img.src=dot; img.style.display='block'; img.style.marginTop='16px'; document.body.appendChild(img);
+      const lc=document.createElement('div'); lc.textContent='This is low-contrast demo text'; lc.style.color='rgb(190,190,190)'; lc.style.backgroundColor='rgb(255,255,255)'; lc.style.margin='12px 0'; document.body.appendChild(lc);
+      const input=document.createElement('input'); input.type='text'; input.placeholder='Unlabeled input'; input.style.display='block'; document.body.appendChild(input);
+      const reportDiv=document.getElementById('report'); reportDiv.classList.add('muted'); reportDiv.textContent='Demo elements inserted. Click “Run Accessibility Check”.';
     });
+    document.getElementById('copyBtn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      const txt = document.getElementById('report').innerText || '';
+      try { await navigator.clipboard.writeText(txt); alert('Report copied to clipboard.'); } catch { alert('Could not copy. Select text and copy manually.'); }
+    });
+    document.getElementById('clearBtn').addEventListener('click', (e) => { e.preventDefault(); clearOutlines(); });
 
-    // ---------- Autorun support: ?autorun=1 (& optional ?demo=1) ----------
-    function insertDemoIssues() {
-      const badImg = document.createElement('img');
-      badImg.src = 'https://via.placeholder.com/100x60';
-      badImg.style.display = 'block';
-      badImg.style.marginTop = '16px';
-      document.body.appendChild(badImg);
+    // -------------------- Bookmarklet link --------------------
+    (function setBookmarklet(){
+      // Same core as runChecker, injected on any site
+      const code = `
+        (()=>{try{
+          if(window.__WCAG_CHECKER_RUNNING__)return;window.__WCAG_CHECKER_RUNNING__=true;
+          const outlined=new WeakSet();const outline=(el,c)=>{try{el.style.outline='2px solid '+c;el.style.outlineOffset='2px';outlined.add(el);}catch{}};
+          const isHidden=(el)=>{const cs=getComputedStyle(el);if(cs.display==='none'||cs.visibility==='hidden'||Number(cs.opacity)===0)return true;if(el.closest('[aria-hidden="true"]'))return true;return false};
+          const hasText=(el)=>{if(!el||el.nodeType!==1||isHidden(el))return false;const t=(el.textContent||'').replace(/\\s+/g,' ').trim();return t.length>0};
+          const rgb=(s)=>{if(!s||!s.startsWith('rgb'))return null;const a=s.match(/\\d+(\\.\\d+)?/g);return a&&a.length>=3?[+a[0],+a[1],+a[2]]:null};
+          const lum=([r,g,b])=>{const f=v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4)};return .2126*f(r)+.7152*f(g)+.0722*f(b)};
+          const ratio=(fg,bg)=>{const L1=lum(fg),L2=lum(bg);return (Math.max(L1,L2)+.05)/(Math.min(L1,L2)+.05)};
+          const bgOf=(el)=>{let cur=el;while(cur&&cur!==document.documentElement){const bg=getComputedStyle(cur).backgroundColor;if(bg&&bg.startsWith('rgb')){const a=bg.match(/\\d+(\\.\\d+)?/g);if(a&&a.length>=4&&+a[3]===0){cur=cur.parentElement;continue}return rgb(bg)}cur=cur.parentElement}const body=getComputedStyle(document.body).backgroundColor;return rgb(body)||[255,255,255]};
+          const cssSel=(el)=>{try{const id=el.id?('#'+el.id):'';const cls=(el.className&&typeof el.className==='string')?('.'+el.className.trim().split(/\\s+/).slice(0,2).join('.')):'';return el.tagName.toLowerCase()+id+cls;}catch{return el.tagName.toLowerCase()}};
+          const issues={missingAlt:[],emptyAlt:[],missingLabel:[],lowContrast:[]};
+          document.querySelectorAll('img').forEach(img=>{if(isHidden(img))return;const role=(img.getAttribute('role')||'').toLowerCase();const ah=img.getAttribute('aria-hidden')==='true';const deco=(role==='presentation')||ah;const alt=img.getAttribute('alt');if(alt===null){issues.missingAlt.push(img);outline(img,'#c00')}else if(alt.trim()===''&&!deco){issues.emptyAlt.push(img);outline(img,'#b36b00')}});
+          const seen=new WeakSet();
+          document.querySelectorAll('body *').forEach(el=>{if(!hasText(el))return;if(seen.has(el))return;const cs=getComputedStyle(el);const fg=rgb(cs.color);if(!fg)return;const bg=bgOf(el);if(!bg)return;const size=parseFloat(cs.fontSize)||16;const bold=(parseInt(cs.fontWeight,10)||400)>=700;const large=size>=24||(bold&&size>=19.2);const thr=large?3.0:4.5;const r=ratio(fg,bg);if(r<thr){issues.lowContrast.push({el,r,thr});outline(el,'#b36b00');seen.add(el)}});
+          document.querySelectorAll('input,textarea,select').forEach(el=>{if(isHidden(el))return;const type=(el.getAttribute('type')||'').toLowerCase();if(['hidden','button','submit','reset','image'].includes(type))return;let ok=false;const id=el.id;if(id&&document.querySelector('label[for=\"'+CSS.escape(id)+'\"]'))ok=true;else if(el.closest('label'))ok=true;else if((el.getAttribute('aria-label')||'').trim())ok=true;else{const ll=(el.getAttribute('aria-labelledby')||'').trim();if(ll){const t=ll.split(/\\s+/).map(i=>(document.getElementById(i)?.textContent||'').trim()).join(' ');if(t.length)ok=true}}if(!ok){issues.missingLabel.push(el);outline(el,'#c00')}});
+          const ex=(arr)=>arr.slice(0,5).map(x=>'  • '+(x.msg||cssSel(x.el||x)));
+          const lines=[];lines.push('❌ Images missing alt: '+issues.missingAlt.length);if(issues.missingAlt.length)lines.push(...ex(issues.missingAlt));
+          lines.push('⚠️ Images with empty alt (verify decorative): '+issues.emptyAlt.length);if(issues.emptyAlt.length)lines.push(...ex(issues.emptyAlt));
+          lines.push('❌ Inputs missing accessible label: '+issues.missingLabel.length);if(issues.missingLabel.length)lines.push(...ex(issues.missingLabel));
+          lines.push('⚠️ Low-contrast text blocks: '+issues.lowContrast.length);if(issues.lowContrast.length)lines.push(...issues.lowContrast.slice(0,5).map(o=>'  • '+cssSel(o.el)+' contrast '+o.r.toFixed(2)+':1 (needs ≥ '+o.thr+':1)'));
+          const out=lines.join('\\n')||'✅ No major issues found.';
+          let box=document.getElementById('__wcag_box__');if(!box){box=document.createElement('div');box.id='__wcag_box__';box.style.cssText='position:fixed;inset:auto 12px 12px auto;max-width:480px;background:#fff;border:1px solid #e2e4e8;border-radius:8px;padding:10px 12px;box-shadow:0 6px 18px rgba(0,0,0,.12);z-index:999999;font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;white-space:pre-wrap;';document.body.appendChild(box)}
+          box.textContent=out;box.title='WCAG 2.2 quick report';
+          setTimeout(()=>{window.__WCAG_CHECKER_RUNNING__=false;},50);
+        }catch(e){alert('WCAG checker error: '+(e&&e.message?e.message:e))}})();
+      `;
+      const href = 'javascript:' + encodeURIComponent(code);
+      const a = document.getElementById('bmLink');
+      a.setAttribute('href', href);
+      a.setAttribute('title', 'Drag this to your bookmarks bar, then click it on any site');
+    })();
 
-      const lc = document.createElement('div');
-      lc.textContent = 'This is low-contrast demo text';
-      lc.style.color = 'rgb(190,190,190)';
-      lc.style.backgroundColor = 'rgb(255,255,255)';
-      lc.style.margin = '12px 0';
-      document.body.appendChild(lc);
-
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.placeholder = 'Unlabeled input';
-      input.style.display = 'block';
-      document.body.appendChild(input);
-    }
-
-    (function autorunIfRequested(){
+    // -------------------- Autorun (?demo=1&autorun=1) --------------------
+    (function autorunIfRequested() {
       const q = new URLSearchParams(location.search);
       const shouldDemo = q.has('demo') && q.get('demo') !== '0';
       const shouldAutorun = q.has('autorun') && q.get('autorun') !== '0';
-      if (shouldDemo) { try { insertDemoIssues(); } catch(e){} }
-      if (shouldAutorun) { setTimeout(runChecker, 50); }
+      if (shouldDemo) document.getElementById('demoBtn').click();
+      if (shouldAutorun) setTimeout(() => document.getElementById('runBtn').click(), 50);
     })();
   </script>
 </body>
