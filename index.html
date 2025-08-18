@@ -43,8 +43,13 @@
         class="btn btn-primary"
         role="button"
         id="run-checker-bookmarklet"
-        href="javascript:(()=>{try{window.__wcagCheckerLoaded?window.__wcagChecker.run():(()=>{const s=document.createElement('script');s.src='https://c-hibbard.github.io/wcag-checker-tool/dist/checker.min.js';s.onload=()=>{window.__wcagCheckerLoaded=true;window.__wcagChecker.run();};document.documentElement.appendChild(s)})()}catch(e){alert('WCAG Checker: failed to load. See console.');console.error(e);}})();"
-        aria-label="Run the WCAG checker on this page"
+        href="javascript:(()=>{try{
+        const s=document.createElement('script');
+        s.src='https://c-hibbard.github.io/wcag-checker-tool/dist/checker.v3.min.js';
+        s.onload=()=>{window.__wcagChecker&&window.__wcagChecker.run();};
+        document.documentElement.appendChild(s);
+      }catch(e){alert('WCAG Checker: failed to load. See console.');console.error(e);}})();"
+
       >Run Checker</a>
 
       <!-- 2) Open the live tool page itself -->
