@@ -10,7 +10,7 @@ A lightweight, browser-based tool that scans webpages for common WCAG 2.2 access
 - ❌ Form inputs missing associated `<label>` elements
 
 ## 🚀 Try It Live
-👉 [Click here to run the checker](https://yourusername.github.io/wcag-checker)
+👉 [Click here to run the checker]((https://c-hibbard.github.io/wcag-checker-tool/))
 
 *(Replace `yourusername` with your GitHub username)*
 
