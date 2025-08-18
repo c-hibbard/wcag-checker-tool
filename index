@@ -45,7 +45,7 @@
     <li>Unlabeled form inputs</li>
   </ul>
 
-  <button id="runBtn">Run the Checker</button>
+  <button id="runLink">Run the Checker</button>
   <div id="report">Click “Run the Checker” to analyze this page.</div>
 
   <script>
@@ -89,10 +89,12 @@
         }
       });
 
-      // Check 3: Missing labels
+      // Check 3: Missing labels (also detects wrapping <label>)
       document.querySelectorAll('input, textarea, select').forEach(el => {
         const id = el.id;
-        if (!id || !document.querySelector(`label[for='${id}']`)) {
+        const hasForLabel = id && document.querySelector(`label[for='${id}']`);
+        const hasWrappingLabel = el.closest('label');
+        if (!hasForLabel && !hasWrappingLabel) {
           report.push('❌ Form input missing associated <label>.');
         }
       });
@@ -103,7 +105,14 @@
         : report.join('\n');
     }
 
-    // ---------- Optional: demo injector (referenced by autorun ?demo) ----------
+    // ---------- Wire up the button (once) ----------
+    // IMPORTANT: run *outside* runChecker(), and target the correct id
+    document.getElementById('runLink').addEventListener('click', function (e) {
+      e.preventDefault();
+      runChecker();
+    });
+
+    // ---------- Autorun support: ?autorun=1 (& optional ?demo=1) ----------
     function insertDemoIssues() {
       const badImg = document.createElement('img');
       badImg.src = 'https://via.placeholder.com/100x60';
@@ -125,13 +134,6 @@
       document.body.appendChild(input);
     }
 
-    // ---------- Wire up the button ----------
-    document.getElementById('runBtn').addEventListener('click', function (e) {
-      e.preventDefault();
-      runChecker();
-    });
-
-    // ---------- Autorun support: ?autorun=1 (& optional ?demo=1) ----------
     (function autorunIfRequested(){
       const q = new URLSearchParams(location.search);
       const shouldDemo = q.has('demo') && q.get('demo') !== '0';
