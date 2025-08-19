@@ -4,7 +4,6 @@ chrome.action.onClicked.addListener(async (tab) => {
   await chrome.scripting.executeScript({
     target: { tabId: tab.id, allFrames: false },
     files: ["inject.js"]
-  });
 });
 
 // Runs when you press the keyboard shortcut (Ctrl/Cmd+Shift+Y)
