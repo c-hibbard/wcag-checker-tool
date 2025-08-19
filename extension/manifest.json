@@ -3,19 +3,13 @@
   "name": "WCAG Checker",
   "description": "Run a quick WCAG check (alt text, labels, contrast) on the current page.",
   "version": "0.3.0",
-  "action": {
-    "default_title": "Run WCAG Checker"
-  },
+  "action": { "default_title": "Run WCAG Checker" },
   "permissions": ["scripting", "activeTab", "tabs"],
-  "background": {
-    "service_worker": "background.js"
-  },
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "background.js" },
   "commands": {
     "run-checker": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+Y",
-        "mac": "Command+Shift+Y"
-      },
+      "suggested_key": { "default": "Ctrl+Shift+Y", "mac": "Command+Shift+Y" },
       "description": "Run WCAG Checker on the current page"
     }
   }
