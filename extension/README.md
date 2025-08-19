@@ -7,7 +7,7 @@ A lightweight browser extension that scans webpages for common WCAG 2.2 accessib
 ## 🚀 Installation
 
 ### Option 1: Manual Install (Developer Mode)
-1. [Download this repo as a ZIP](https://github.com/<yourusername>/<yourrepo>/archive/refs/heads/main.zip)  
+1. [Download this repo as a ZIP](https://github.com/c-hibbard/wcag-checker-tool/tree/main/extension)
 2. Unzip the folder on your computer.  
 3. Open **Chrome** or **Edge** and go to:  
 
