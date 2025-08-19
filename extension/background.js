@@ -1,16 +1,22 @@
-// Runs when you click the toolbar button
-chrome.action.onClicked.addListener(async (tab) => {
-  if (!tab.id) return;
+// background.js (MV3 service worker)
+
+// Helper: run the injector in a given tab
+async function runCheckerInTab(tabId) {
+  if (!tabId) return;
   await chrome.scripting.executeScript({
-    target: { tabId: tab.id, allFrames: false },
-    files: ["inject.js"]
+    target: { tabId, allFrames: false },
+    files: ["inject.js"],
+  });
+}
+
+// Toolbar button click → run on current tab
+chrome.action.onClicked.addListener(async (tab) => {
+  await runCheckerInTab(tab?.id);
 });
 
-// Runs when you press the keyboard shortcut (Ctrl/Cmd+Shift+Y)
-chrome.commands.onCommand.addListener(async (command, tab) => {
-  if (command !== "run-checker" || !tab?.id) return;
-  await chrome.scripting.executeScript({
-    target: { tabId: tab.id, allFrames: false },
-    files: ["inject.js"]
-  });
+// Keyboard shortcut (Ctrl/Cmd+Shift+Y) → find active tab, then run
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command !== "run-checker") return;
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  await runCheckerInTab(tab?.id);
 });
