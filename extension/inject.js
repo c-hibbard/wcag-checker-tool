@@ -1,10 +1,10 @@
 (() => {
   const OVERLAY_ID = "wcag-checker-overlay";
 
-  // Clear prior overlay on rerun
+  // Remove any prior overlay
   document.getElementById(OVERLAY_ID)?.remove();
 
-  // ------- helpers -------
+  // ---------- helpers ----------
   const isElementVisible = (el) => {
     const rect = el.getBoundingClientRect();
     const cs = getComputedStyle(el);
@@ -15,6 +15,7 @@
   };
   const hasText = (el) => !!(el.innerText && el.innerText.replace(/\s+/g, "").length);
   const isInSvg = (el) => !!el.closest("svg");
+
   const parseRGB = (s) => {
     if (!s) return [0,0,0,1];
     const m = s.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([0-9.]+))?\)/i);
@@ -36,12 +37,12 @@
     let node = el;
     while (node && node !== document.documentElement) {
       const cs = getComputedStyle(node);
-      if (hasImageOrGradient(cs)) return null; // skip: likely gradient/image bg
+      if (hasImageOrGradient(cs)) return null; // skip gradient/image bgs
       const [r,g,b,a] = parseRGB(cs.backgroundColor);
       if (a > 0.01) return [r,g,b,1];
       node = node.parentElement;
     }
-    return [255,255,255,1]; // fallback white
+    return [255,255,255,1];
   };
   const isLargeText = (cs) => {
     const sizePx = parseFloat(cs.fontSize);
@@ -49,7 +50,7 @@
     return sizePx >= 24 || (sizePx >= 18.66 && weight >= 700);
   };
   const cssPath = (el) => {
-    // short-ish selector to help devs find it
+    // compact-ish selector for display
     try {
       const parts = [];
       let n = el;
@@ -66,7 +67,7 @@
     } catch { return el.tagName.toLowerCase(); }
   };
 
-  // ------- run checks (with options) -------
+  // ---------- options & state ----------
   const options = {
     checkAlt: true,
     checkLabels: true,
@@ -74,13 +75,36 @@
     interactiveOnly: false,
   };
 
+  // Per-item mute state
+  const mutedEls = new WeakSet();
+  let showMuted = false;
+
+  // Style: muted look + basic overlay bits
+  const style = document.createElement("style");
+  style.textContent = `
+    .wcag-muted { opacity: .35 !important; outline: none !important; box-shadow: none !important; }
+    #${OVERLAY_ID} *, #${OVERLAY_ID} button { font: inherit; }
+    #${OVERLAY_ID} .wcag-row { display:flex; gap:8px; align-items:flex-start; margin-bottom:.6em; }
+    #${OVERLAY_ID} .wcag-actions button { margin-left:6px; }
+    #${OVERLAY_ID} .wcag-section { border-top:1px solid #e3e3e3; margin-top:.5rem; padding-top:.5rem; }
+    #${OVERLAY_ID} ol { margin:0; }
+  `;
+  document.head.appendChild(style);
+
+  const applyMuteStates = () => {
+    // Remove previous
+    document.querySelectorAll(".wcag-muted").forEach(el => el.classList.remove("wcag-muted"));
+    // Apply current
+    issues.forEach(i => { if (mutedEls.has(i.el)) i.el.classList.add("wcag-muted"); });
+  };
+
+  // ---------- run checks ----------
   const runAll = () => {
     const issues = [];
     const pushed = new WeakSet();
 
-    // INTERACTIVE filter
     const interactiveSelector = [
-      "a[href]", "button", "input:not([type=hidden])", "select", "textarea", "[role=button]", "[role=link]"
+      "a[href]","button","input:not([type=hidden])","select","textarea","[role=button]","[role=link]"
     ].join(",");
 
     // 1) Alt
@@ -98,7 +122,6 @@
     if (options.checkLabels) {
       document.querySelectorAll("input, select, textarea").forEach((el) => {
         if (!isElementVisible(el)) return;
-        // ignore hidden/obvious non-text controls
         if (el.tagName === "INPUT" && /^(hidden|submit|button|image|reset|file|range|color|checkbox|radio)$/.test(el.type)) return;
         const id = el.id;
         const hasFor = id && document.querySelector(`label[for="${CSS.escape(id)}"]`);
@@ -145,7 +168,7 @@
 
   let issues = runAll();
 
-  // ------- overlay UI -------
+  // ---------- overlay UI ----------
   const overlay = document.createElement("div");
   overlay.id = OVERLAY_ID;
   Object.assign(overlay.style, {
@@ -154,7 +177,7 @@
     right: "0",
     maxHeight: "100%",
     overflow: "auto",
-    width: "420px",
+    width: "440px",
     zIndex: "2147483647",
     background: "#fff",
     borderLeft: "2px solid #000",
@@ -164,22 +187,18 @@
   });
 
   const header = document.createElement("div");
-  header.style.display = "flex";
-  header.style.justifyContent = "space-between";
-  header.style.alignItems = "center";
-
   const title = document.createElement("h2");
   title.style.margin = "0 0 .5rem";
-  const setTitle = () => {
-    const counts = issues.reduce((m, i) => (m[i.type]=(m[i.type]||0)+1, m), {});
-    const total = issues.length;
-    title.textContent = `WCAG Checker — ${total} issues`;
-    subtitle.innerHTML = Object.entries(counts).map(([k,v])=>`<span style="margin-right:10px">${k}: <b>${v}</b></span>`).join("");
-  };
-
   const subtitle = document.createElement("div");
   subtitle.style.color = "#444";
   subtitle.style.margin = "0 0 .5rem";
+
+  const setTitle = () => {
+    const counts = issues.reduce((m, i) => (m[i.type]=(m[i.type]||0)+1, m), {});
+    const total = issues.filter(i => showMuted || !mutedEls.has(i.el)).length;
+    title.textContent = `WCAG Checker — ${total} issues`;
+    subtitle.innerHTML = Object.entries(counts).map(([k,v])=>`<span style="margin-right:10px">${k}: <b>${v}</b></span>`).join("");
+  };
 
   header.appendChild(title);
   overlay.appendChild(header);
@@ -196,10 +215,12 @@
     <label><input type="checkbox" id="opt-labels" checked> Labels</label>
     <label><input type="checkbox" id="opt-contrast" checked> Contrast</label>
     <label><input type="checkbox" id="opt-interactive"> Only interactive text</label>
+    <label style="grid-column:1/-1"><input type="checkbox" id="opt-show-muted"> Show muted items</label>
     <button id="btn-export" style="grid-column:1/-1;margin-top:4px">Export JSON</button>
   `;
   overlay.appendChild(controls);
 
+  // Issues list
   const list = document.createElement("ol");
   list.style.paddingLeft = "1.2em";
   overlay.appendChild(list);
@@ -207,39 +228,93 @@
   const renderList = () => {
     list.innerHTML = "";
     const LIMIT = 120;
-    issues.slice(0, LIMIT).forEach((it) => {
+
+    const visibleIssues = issues.filter(i => showMuted || !mutedEls.has(i.el));
+
+    visibleIssues.slice(0, LIMIT).forEach((it) => {
       const li = document.createElement("li");
-      li.textContent = `${it.type}: ${it.msg} — ${it.path}`;
-      li.style.marginBottom = ".5em";
-      li.style.cursor = "pointer";
-      li.onmouseenter = () => { it._oldOutline = it.el.style.outline; it.el.style.outline = "2px solid #f00"; };
+      li.className = "wcag-row";
+
+      const txt = document.createElement("div");
+      txt.style.flex = "1";
+      txt.textContent = `${it.type}: ${it.msg} — ${it.path}`;
+
+      const actions = document.createElement("div");
+      actions.className = "wcag-actions";
+      actions.style.whiteSpace = "nowrap";
+
+      // Hide/Unhide button (element-specific)
+      const btnHide = document.createElement("button");
+      const setHideLabel = () => {
+        btnHide.textContent = mutedEls.has(it.el) ? "Unhide" : "Hide";
+        btnHide.title = mutedEls.has(it.el)
+          ? "Show this item again in the list"
+          : "Hide this exact item from the list";
+      };
+      setHideLabel();
+      btnHide.onclick = (e) => {
+        e.stopPropagation();
+        if (mutedEls.has(it.el)) {
+          mutedEls.delete(it.el);
+          it.el.classList.remove("wcag-muted");
+        } else {
+          mutedEls.add(it.el);
+          it.el.classList.add("wcag-muted");
+        }
+        renderList();
+        applyMuteStates();
+      };
+
+      // Focus button
+      const btnFocus = document.createElement("button");
+      btnFocus.textContent = "Focus";
+      btnFocus.title = "Scroll to element";
+      btnFocus.onclick = (e) => {
+        e.stopPropagation();
+        it.el.scrollIntoView({ behavior: "smooth", block: "center" });
+      };
+
+      actions.appendChild(btnHide);
+      actions.appendChild(btnFocus);
+
+      li.onmouseenter = () => {
+        if (mutedEls.has(it.el)) return;
+        it._oldOutline = it.el.style.outline;
+        it.el.style.outline = "2px solid #f00";
+      };
       li.onmouseleave = () => { it.el.style.outline = it._oldOutline || ""; };
       li.onclick = () => it.el.scrollIntoView({ behavior: "smooth", block: "center" });
+
+      li.appendChild(txt);
+      li.appendChild(actions);
       list.appendChild(li);
     });
-    if (issues.length > LIMIT) {
+
+    if (visibleIssues.length > LIMIT) {
       const more = document.createElement("div");
-      more.textContent = `… ${issues.length - LIMIT} more not shown`;
+      more.textContent = `… ${visibleIssues.length - LIMIT} more not shown`;
       more.style.color = "#666";
       list.appendChild(more);
     }
+
     setTitle();
   };
 
-  // Wire up controls
-  const byId = (id) => overlay.querySelector(id);
-  const reRun = () => { issues = runAll(); renderList(); };
+  // Wire controls
+  const byId = (sel) => overlay.querySelector(sel);
+  const reRun = () => { issues = runAll(); renderList(); applyMuteStates(); };
 
   byId("#opt-alt").addEventListener("change", (e) => { options.checkAlt = e.target.checked; reRun(); });
   byId("#opt-labels").addEventListener("change", (e) => { options.checkLabels = e.target.checked; reRun(); });
   byId("#opt-contrast").addEventListener("change", (e) => { options.checkContrast = e.target.checked; reRun(); });
   byId("#opt-interactive").addEventListener("change", (e) => { options.interactiveOnly = e.target.checked; reRun(); });
+  byId("#opt-show-muted").addEventListener("change", (e) => { showMuted = e.target.checked; renderList(); });
+
+  // Export JSON (uses current filtered view)
   byId("#btn-export").addEventListener("click", () => {
-    const payload = issues.map(i => ({
-      type: i.type,
-      message: i.msg,
-      path: i.path
-    }));
+    const payload = issues
+      .filter(i => showMuted || !mutedEls.has(i.el))
+      .map(i => ({ type: i.type, message: i.msg, path: i.path }));
     const blob = new Blob([JSON.stringify({ url: location.href, issues: payload }, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -255,7 +330,8 @@
   closeBtn.onclick = () => overlay.remove();
   overlay.appendChild(closeBtn);
 
+  // Mount overlay & initial render
   document.body.appendChild(overlay);
-  // initial render
   renderList();
+  applyMuteStates();
 })();
