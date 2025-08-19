@@ -4,12 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>WCAG 2.2 Accessibility Checker</title>
-  <meta name="description" content="Lightweight WCAG 2.2 checker you can run on any page—bookmarklet or browser extension." />
+  <meta name="description" content="Lightweight WCAG 2.2 checker—run locally via a Chrome/Edge extension. No accounts. No servers." />
   <style>
     :root { --max: 880px; }
     body {
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
-      line-height: 1.5; margin: 0; color: #111;
+      line-height: 1.5; margin: 0; color: #111; background: #fff;
       -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
     }
     header, main, footer { max-width: var(--max); margin: 0 auto; padding: 1.25rem; }
@@ -20,7 +20,7 @@
     .btn, .link-btn {
       display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
       padding: .65rem .9rem; border-radius: .55rem; text-decoration: none; font-weight: 600;
-      border: 1px solid #ddd; background: #fff;
+      border: 1px solid #ddd; background: #fff; color: #111;
     }
     .btn-primary { background: #111; color: #fff; border-color: #111; }
     code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
@@ -29,66 +29,82 @@
     }
     footer { color: #555; }
     .muted { color: #666; font-size: .95rem; }
+    ol li { margin-bottom: .35rem; }
     .kbd { border: 1px solid #ccc; padding: .05rem .35rem; border-radius: .35rem; background:#f5f5f5; }
+    .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
   </style>
 </head>
 <body>
   <header>
     <h1>WCAG 2.2 Accessibility Checker</h1>
-    <p class="lede">A tiny, browser-based tool that flags <strong>missing <code>alt</code></strong>, <strong>low contrast</strong>, and <strong>inputs without labels</strong>. No install. No data leaves your browser.</p>
+    <p class="lede">
+      A tiny, local-only checker for <strong>missing <code>alt</code></strong>, <strong>inputs without labels</strong>,
+      and <strong>low contrast</strong>. Ships as a Chrome/Edge extension—no servers, no accounts.
+    </p>
 
     <div class="cta-row" role="group" aria-label="Primary actions">
-      <!-- 1) Bookmarklet button (self-contained) -->
-      <a
-        class="btn btn-primary"
-        role="button"
-        id="run-checker-bookmarklet"
-        href="javascript:(()=>{try{
-        const s=document.createElement('script');
-        s.src='https://c-hibbard.github.io/wcag-checker-tool/dist/checker.v3.min.js';
-        s.onload=()=>{window.__wcagChecker&&window.__wcagChecker.run();};
-        document.documentElement.appendChild(s);
-      }catch(e){alert('WCAG Checker: failed to load. See console.');console.error(e);}})();"
-
-      >Run Checker</a>
-
-      <!-- 2) Open the live tool page itself -->
-      <a class="btn link-btn" href="./index.html" aria-label="Open the checker app page">Open the checker</a>
-
-      <!-- 3) Demo that auto-runs -->
-      <a class="btn link-btn" href="./index.html?demo=1&autorun=1" aria-label="Open demo page with checker auto-run">Run demo</a>
-
-      <!-- 4) Repo -->
-      <a class="btn link-btn" href="https://github.com/c-hibbard/wcag-checker-tool" aria-label="Open GitHub repository">GitHub</a>
+      <a class="btn btn-primary" href="https://github.com/c-hibbard/wcag-checker-tool" aria-label="Open GitHub repository">Open on GitHub</a>
+      <a class="btn link-btn" href="#install" aria-label="Jump to install instructions">Install (Load Unpacked)</a>
+      <a class="btn link-btn" href="#features" aria-label="Jump to features">See features</a>
+      <a class="btn link-btn" href="./privacy.html" aria-label="Privacy">Privacy</a>
     </div>
 
-    <p class="muted">Tip: Right-click “Run Checker” → <span class="kbd">Bookmark link</span> to create the bookmarklet.</p>
-    <noscript><p><strong>Enable JavaScript</strong> to run the checker.</p></noscript>
+    <p class="muted">Tip: If you haven’t used unpacked extensions before, the steps below take ~1 minute.</p>
   </header>
 
   <main>
-    <section class="card" aria-labelledby="howto">
-      <h2 id="howto">How to use</h2>
+    <section id="install" class="card" aria-labelledby="install-h">
+      <h2 id="install-h">Install the extension (unpacked)</h2>
       <ol>
-        <li><strong>Bookmark the “Run Checker” button</strong> above (right-click → Bookmark link).</li>
-        <li>Navigate to any site and click your bookmark to scan.</li>
-        <li>Or open the demo link and it’ll auto-run.</li>
+        <li>Download or clone the repo.</li>
+        <li>Open <code>chrome://extensions</code> (or <code>edge://extensions</code>).</li>
+        <li>Toggle <strong>Developer mode</strong>.</li>
+        <li>Click <strong>Load unpacked</strong> → select the <code>extension/</code> folder (it contains <code>manifest.json</code>).</li>
+        <li>Pin the toolbar icon. Optional: set a shortcut at <code>chrome://extensions/shortcuts</code>.</li>
       </ol>
-      <p class="muted">Nothing is uploaded. All analysis runs locally in your browser.</p>
+      <p class="muted">
+        Extensions can’t run on <code>chrome://*</code> pages or the Chrome Web Store. Test on any normal website.
+      </p>
     </section>
 
-    <section aria-labelledby="whatchecks">
-      <h2 id="whatchecks">What it checks</h2>
+    <section id="features" aria-labelledby="features-h">
+      <h2 id="features-h">What it does</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Checks</h3>
+          <ul>
+            <li><strong>Alt text</strong> on images (WCAG 1.1.1)</li>
+            <li><strong>Labels</strong> for form inputs (WCAG 3.3.2, 1.3.1)</li>
+            <li><strong>Contrast</strong> for visible text (WCAG 1.4.3), with
+              <em>3.0:1</em> for large/bold and <em>4.5:1</em> for normal text</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Overlay tools</h3>
+          <ul>
+            <li>Filters: Alt / Labels / Contrast</li>
+            <li>Only interactive text (links, buttons, inputs)</li>
+            <li>Per-item <strong>Hide/Unhide</strong> &amp; <strong>Show muted</strong></li>
+            <li><strong>Copy selector</strong> &amp; WCAG references per item</li>
+            <li><strong>Export JSON</strong> report for tickets</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Ignore in your HTML</h3>
+          <p>Add <code>data-wcag-ignore</code> to suppress checks in a subtree:</p>
+          <pre><code>&lt;div data-wcag-ignore="all"&gt;...&lt;/div&gt;
+&lt;div data-wcag-ignore="contrast,labels"&gt;...&lt;/div&gt;</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section id="notes" aria-labelledby="notes-h">
+      <h2 id="notes-h">Notes & limitations</h2>
       <ul>
-        <li>Images missing <code>alt</code></li>
-        <li>Low text/background contrast</li>
-        <li>Inputs without associated labels</li>
+        <li>Does not scan <code>chrome://*</code> pages or the Web Store (browser restriction).</li>
+        <li>Contrast on image/gradient backgrounds is skipped to reduce false positives.</li>
+        <li>The shown selector is a concise “find-it-fast” path, not a guaranteed unique selector.</li>
       </ul>
-    </section>
-
-    <section aria-labelledby="ext">
-      <h2 id="ext">Prefer an extension?</h2>
-      <p>Load the extension for Chrome/Edge/Firefox (unpacked or store build) and map a keyboard shortcut to trigger checks on any page.</p>
     </section>
   </main>
 
