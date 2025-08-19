@@ -6,7 +6,7 @@
   "action": {
     "default_title": "Run WCAG Checker"
   },
-  "permissions": ["scripting", "activeTab"],
+  "permissions": ["scripting", "activeTab", "tabs"],
   "background": {
     "service_worker": "background.js"
   },
