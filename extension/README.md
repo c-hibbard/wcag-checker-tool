@@ -18,7 +18,7 @@ A lightweight tool that scans webpages for common **WCAG 2.2 accessibility issue
 ## 🚀 Installation
 
 ### 1. Download the Extension
-[![⬇️ Download WCAG Checker](https://img.shields.io/badge/Download-WCAG%20Checker-blue?style=for-the-badge)](https://github.com/c-hibbard/wcag-checker-tool/blob/main/extension/wcag-checker-tool_001.zip)
+[![⬇️ Download WCAG Checker](https://img.shields.io/badge/Download-WCAG%20Checker-blue?style=for-the-badge)](https://github.com/c-hibbard/wcag-checker-tool/raw/main/extension/wcag-checker-tool_001.zip)
 
 ### 2. Unpack & Load
 1. **Unzip** the downloaded file (`wcag-checker-tool_001.zip`).  
