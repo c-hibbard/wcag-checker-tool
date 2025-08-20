@@ -1,7 +1,7 @@
 (() => {
   const OVERLAY_ID = "wcag-checker-overlay";
 
-  // Remove old overlay on rerun
+  // Remove any prior overlay
   document.getElementById(OVERLAY_ID)?.remove();
 
   // ---------- helpers ----------
@@ -66,19 +66,20 @@
       return parts.join(" > ");
     } catch { return el.tagName.toLowerCase(); }
   };
+  const debounce = (fn, wait = 400) => {
+    let t; 
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+  };
 
-  // ---------- WCAG reference mapping ----------
-  // We display these next to each finding.
+  // ---------- WCAG references ----------
   const RULES = {
-    alt: { label: "Missing alt", wcag: ["1.1.1 (Non-text Content)"] },
-    labels: { label: "Missing label", wcag: ["3.3.2 (Labels or Instructions)", "1.3.1 (Info and Relationships)"] },
-    contrast: { label: "Low contrast", wcag: ["1.4.3 (Contrast Minimum)"] }
+    alt:      { label: "Missing alt",    wcag: ["1.1.1 (Non-text Content)"] },
+    labels:   { label: "Missing label",  wcag: ["3.3.2 (Labels or Instructions)", "1.3.1 (Info and Relationships)"] },
+    contrast: { label: "Low contrast",   wcag: ["1.4.3 (Contrast Minimum)"] }
   };
 
   // ---------- ignore mechanism ----------
-  // Add data-wcag-ignore on any element to skip checks.
-  //   data-wcag-ignore="all"  -> skip all rules
-  //   data-wcag-ignore="contrast" / "labels" / "alt" (comma-separated allowed)
+  // data-wcag-ignore="all" or comma list e.g. "contrast,labels"
   const isIgnored = (el, kind) => {
     let n = el;
     while (n && n.nodeType === 1) {
@@ -99,12 +100,11 @@
     checkContrast: true,
     interactiveOnly: false
   };
-
-  // Per-item mute state
-  const mutedEls = new WeakSet();
+  const mutedEls = new WeakSet(); // per-item Hide/Unhide
   let showMuted = false;
+  let issues = []; // will be filled by runAll()
 
-  // Style (overlay + muted)
+  // ---------- styles ----------
   const style = document.createElement("style");
   style.textContent = `
     .wcag-muted { opacity:.35 !important; outline:none !important; box-shadow:none !important; }
@@ -122,22 +122,22 @@
     issues.forEach(i => { if (mutedEls.has(i.el)) i.el.classList.add("wcag-muted"); });
   };
 
-  // ---------- run checks ----------
+  // ---------- scanner ----------
   const runAll = () => {
-    const issues = [];
-    const pushed = new WeakSet();
+    const results = [];
+    const pushed = new WeakSet(); // avoid dupes
 
     const interactiveSelector = [
       "a[href]","button","input:not([type=hidden])","select","textarea","[role=button]","[role=link]"
     ].join(",");
 
-    // 1) Missing alt
+    // 1) Alt
     if (options.checkAlt) {
       document.querySelectorAll("img").forEach((el) => {
         if (!isElementVisible(el)) return;
         if (isIgnored(el, "alt")) return;
         if (!el.hasAttribute("alt")) {
-          issues.push({
+          results.push({
             type: "Missing label",
             rule: "alt",
             el,
@@ -161,7 +161,7 @@
         const wrapped = el.closest("label");
         const aria = el.getAttribute("aria-label") || el.getAttribute("aria-labelledby");
         if (!hasFor && !wrapped && !aria) {
-          issues.push({
+          results.push({
             type: "Missing label",
             rule: "labels",
             el,
@@ -174,7 +174,7 @@
       });
     }
 
-    // 3) Low contrast
+    // 3) Contrast
     if (options.checkContrast) {
       const SKIP_TAGS = new Set(["HTML","HEAD","META","LINK","STYLE","SCRIPT","NOSCRIPT","BR","HR","IFRAME","SVG","CANVAS","VIDEO","AUDIO","IMG","SOURCE","TRACK","PICTURE"]);
       const nodes = options.interactiveOnly ? document.querySelectorAll(interactiveSelector) : document.body.querySelectorAll("*");
@@ -198,7 +198,7 @@
         const threshold = isLargeText(cs) ? 3.0 : 4.5;
 
         if (ratio < threshold) {
-          issues.push({
+          results.push({
             type: "Low contrast",
             rule: "contrast",
             el,
@@ -211,14 +211,13 @@
       });
     }
 
-    return issues;
+    return results;
   };
-
-  let issues = runAll();
 
   // ---------- overlay UI ----------
   const overlay = document.createElement("div");
   overlay.id = OVERLAY_ID;
+  overlay.setAttribute("data-wcag-ignore", "all"); // never scan our own UI
   Object.assign(overlay.style, {
     position: "fixed",
     top: "0",
@@ -249,8 +248,8 @@
   };
 
   header.appendChild(title);
+  header.appendChild(subtitle);
   overlay.appendChild(header);
-  overlay.appendChild(subtitle);
 
   // Controls
   const controls = document.createElement("div");
@@ -267,7 +266,7 @@
     <button id="btn-export" style="grid-column:1/-1;margin-top:4px">Export JSON</button>
     <div class="wcag-section" style="grid-column:1/-1;color:#555">
       <b>Ignore via HTML:</b> add <code>data-wcag-ignore="all"</code> or any of
-      <code>alt</code>, <code>labels</code>, <code>contrast</code> (comma-separated) to an element to suppress checks on it and its descendants.
+      <code>alt</code>, <code>labels</code>, <code>contrast</code> (comma-separated) to an element to suppress checks for it and its descendants.
     </div>
   `;
   overlay.appendChild(controls);
@@ -277,10 +276,15 @@
   list.style.paddingLeft = "1.2em";
   overlay.appendChild(list);
 
+  // Close (created here so we can disconnect observer on click)
+  const closeBtn = document.createElement("button");
+  closeBtn.textContent = "Close";
+  closeBtn.style.marginTop = ".5rem";
+
+  // Render list
   const renderList = () => {
     list.innerHTML = "";
     const LIMIT = 150;
-
     const visibleIssues = issues.filter(i => showMuted || !mutedEls.has(i.el));
 
     visibleIssues.slice(0, LIMIT).forEach((it) => {
@@ -334,7 +338,7 @@
         it.el.scrollIntoView({ behavior: "smooth", block: "center" });
       };
 
-      // Copy selector (NEW)
+      // Copy selector
       const btnCopy = document.createElement("button");
       btnCopy.textContent = "Copy";
       btnCopy.title = "Copy selector to clipboard";
@@ -346,7 +350,6 @@
           btnCopy.textContent = "Copied!";
           setTimeout(() => (btnCopy.textContent = "Copy"), 900);
         } catch {
-          // fallback
           const ta = document.createElement("textarea");
           ta.value = text;
           document.body.appendChild(ta);
@@ -385,7 +388,7 @@
     setTitle();
   };
 
-  // Wire controls
+  // Wiring
   const byId = (sel) => overlay.querySelector(sel);
   const reRun = () => { issues = runAll(); renderList(); applyMuteStates(); };
 
@@ -408,16 +411,39 @@
     URL.revokeObjectURL(a.href);
   });
 
-  // Close
-  const closeBtn = document.createElement("button");
-  closeBtn.textContent = "Close";
-  closeBtn.style.marginTop = ".5rem";
-  closeBtn.onclick = () => overlay.remove();
-  overlay.appendChild(closeBtn);
-
-  // Mount & render
+  // Mount & initial render
   document.body.appendChild(overlay);
-  let issues = runAll(); // ensure state after DOM mutations
+
+  // Initial scan AFTER overlay exists (overlay is ignored via data-wcag-ignore)
+  issues = runAll();
   renderList();
   applyMuteStates();
+
+  // --- Re-scan when the page changes (debounced)
+  const recheck = debounce(() => {
+    issues = runAll();
+    renderList();
+    applyMuteStates();
+  }, 500);
+
+  const observer = new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      if (overlay.contains(m.target)) continue; // ignore our own UI changes
+      recheck();
+      break;
+    }
+  });
+  observer.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    characterData: false
+  });
+
+  // Close: disconnect observer and remove overlay
+  closeBtn.onclick = () => {
+    try { observer.disconnect(); } catch {}
+    overlay.remove();
+  };
+  overlay.appendChild(closeBtn);
 })();
