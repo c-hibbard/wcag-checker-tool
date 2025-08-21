@@ -132,7 +132,30 @@
   let showMuted = false;
   let issues = []; // filled by runAll()
 
-  // ---------- styles ----------
+  // ---------- overlay UI skeleton ----------
+  const overlay = document.createElement("div");
+  overlay.id = OVERLAY_ID;
+  overlay.setAttribute("data-wcag-ignore", "all"); // never scan our own UI
+  Object.assign(overlay.style, {
+    position: "fixed",
+    top: "0",
+    right: "0",
+    maxHeight: "100%",
+    overflow: "auto",
+    width: "500px",
+    zIndex: "2147483647",
+    background: "#fff",
+    borderLeft: "2px solid #000",
+    boxShadow: "-2px 0 5px rgba(0,0,0,.2)",
+    font: "14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
+    padding: "12px"
+  });
+  document.body.appendChild(overlay);
+
+  // One canonical helper for querying inside overlay
+  const byId = (sel) => overlay.querySelector(sel);
+
+  // ---------- injected styles ----------
   const style = document.createElement("style");
   style.textContent = `
     .wcag-muted { opacity:.35 !important; outline:none !important; box-shadow:none !important; }
@@ -256,25 +279,26 @@
 
   // ---------- Pro helpers (gated) ----------
   const nearestAccessibleColor = (fg, bg, target = 4.5) => {
-    // naive approach: move fg towards black/white to reach target
-    const toRatio = (c) => contrastRatio(parseRGB(c), parseRGB(bg));
+    // naive search: nudge fg toward black/white until target ratio
     const clamp = (n) => Math.max(0, Math.min(255, Math.round(n)));
     const [r,g,b] = parseRGB(fg);
-    const trySteps = (towards) => {
+    const bgRgb = Array.isArray(bg) ? bg : parseRGB(bg);
+    const tryTowards = (white = false) => {
       let rr = r, gg = g, bb = b;
-      for (let i=0;i<40;i++) {
-        rr = clamp(rr + (towards === "white" ? 6 : -6));
-        gg = clamp(gg + (towards === "white" ? 6 : -6));
-        bb = clamp(bb + (towards === "white" ? 6 : -6));
-        const cr = contrastRatio([rr,gg,bb], parseRGB(bg));
+      for (let i=0;i<50;i++) {
+        const delta = white ? 6 : -6;
+        rr = clamp(rr + delta);
+        gg = clamp(gg + delta);
+        bb = clamp(bb + delta);
+        const cr = contrastRatio([rr,gg,bb], bgRgb);
         if (cr >= target) return `rgb(${rr}, ${gg}, ${bb})`;
       }
       return null;
     };
-    return trySteps("black") || trySteps("white");
+    return tryTowards(false) || tryTowards(true);
   };
 
-  const renderUpgradeModal = (overlay, reason = "This feature requires Pro.") => {
+  const renderUpgradeModal = (reason = "This feature requires Pro.") => {
     const m = document.createElement("div");
     m.className = "modal";
     m.innerHTML = `
@@ -304,32 +328,13 @@
       await checkLicense();
       m.remove();
       alert("Pro activated. Thanks!");
-      // Re-render to enable Pro controls
       renderList();
       setTitle();
       wireProControls();
     };
   };
 
-  // ---------- overlay UI ----------
-  const overlay = document.createElement("div");
-  overlay.id = OVERLAY_ID;
-  overlay.setAttribute("data-wcag-ignore", "all"); // never scan our own UI
-  Object.assign(overlay.style, {
-    position: "fixed",
-    top: "0",
-    right: "0",
-    maxHeight: "100%",
-    overflow: "auto",
-    width: "500px",
-    zIndex: "2147483647",
-    background: "#fff",
-    borderLeft: "2px solid #000",
-    boxShadow: "-2px 0 5px rgba(0,0,0,.2)",
-    font: "14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
-    padding: "12px"
-  });
-
+  // ---------- header + controls + list ----------
   const header = document.createElement("div");
   const title = document.createElement("h2");
   title.style.margin = "0 0 .5rem";
@@ -348,7 +353,6 @@
   header.appendChild(subtitle);
   overlay.appendChild(header);
 
-  // Controls (Free + Pro)
   const controls = document.createElement("div");
   controls.style.display = "grid";
   controls.style.gridTemplateColumns = "repeat(2, minmax(0,1fr))";
@@ -382,18 +386,21 @@
   `;
   overlay.appendChild(controls);
 
-  // Issues list
   const list = document.createElement("ol");
   list.style.paddingLeft = "1.2em";
   overlay.appendChild(list);
 
-  // Close (disconnect observer on click)
   const closeBtn = document.createElement("button");
   closeBtn.textContent = "Close";
   closeBtn.style.marginTop = ".5rem";
   overlay.appendChild(closeBtn);
 
-  // Render list
+  // ---------- render ----------
+  const applyMuteStates = () => {
+    document.querySelectorAll(".wcag-muted").forEach(el => el.classList.remove("wcag-muted"));
+    issues.forEach(i => { if (mutedEls.has(i.el)) i.el.classList.add("wcag-muted"); });
+  };
+
   const renderList = () => {
     list.innerHTML = "";
     const LIMIT = 150;
@@ -417,7 +424,6 @@
       actions.className = "wcag-actions";
       actions.style.whiteSpace = "nowrap";
 
-      // Hide/Unhide (element-specific)
       const btnHide = document.createElement("button");
       const setHideLabel = () => {
         btnHide.textContent = mutedEls.has(it.el) ? "Unhide" : "Hide";
@@ -439,7 +445,6 @@
         applyMuteStates();
       };
 
-      // Focus (scroll to)
       const btnFocus = document.createElement("button");
       btnFocus.textContent = "Focus";
       btnFocus.title = "Scroll to element";
@@ -448,7 +453,6 @@
         it.el.scrollIntoView({ behavior: "smooth", block: "center" });
       };
 
-      // Copy selector
       const btnCopy = document.createElement("button");
       btnCopy.textContent = "Copy";
       btnCopy.title = "Copy selector to clipboard";
@@ -498,8 +502,7 @@
     setTitle();
   };
 
-  // Wiring (free)
-  const byId = (sel) => overlay.querySelector(sel);
+  // ---------- wiring (free controls) ----------
   const reRun = () => { issues = runAll(); renderList(); applyMuteStates(); };
 
   byId("#opt-alt").addEventListener("change", (e) => { options.checkAlt = e.target.checked; reRun(); });
@@ -508,7 +511,6 @@
   byId("#opt-interactive").addEventListener("change", (e) => { options.interactiveOnly = e.target.checked; reRun(); });
   byId("#opt-show-muted").addEventListener("change", (e) => { showMuted = e.target.checked; renderList(); });
 
-  // Export JSON (respects current filters & muted)
   byId("#btn-export").addEventListener("click", () => {
     const payload = issues
       .filter(i => showMuted || !mutedEls.has(i.el))
@@ -521,7 +523,7 @@
     URL.revokeObjectURL(a.href);
   });
 
-  // ---------- Pro controls wiring (gated handlers) ----------
+  // ---------- Pro controls wiring ----------
   const wireProControls = () => {
     const note = byId("#domain-note");
     if (!IS_PRO) {
@@ -533,19 +535,18 @@
     const guard = (cb, reason) => (e) => {
       if (!IS_PRO) {
         e?.preventDefault?.();
-        renderUpgradeModal(overlay, reason);
+        renderUpgradeModal(reason);
         return;
       }
       cb(e);
     };
 
-    // PDF export (stub)
+    // PDF export (stub for now)
     byId("#btn-export-pdf").onclick = guard(() => {
-      // Simple stub; you can later implement real capture-to-pdf via chrome.tabs.captureVisibleTab + jsPDF in bg page
-      alert("PDF export (Pro): coming soon.\n(Your license is valid; this stub proves gating works.)");
+      alert("PDF export (Pro): coming soon.\nYour license is valid; this proves gating works.");
     }, "Export PDF reports with counts, page URL, and optional screenshots.");
 
-    // Focus map (tab order)
+    // Focus map
     byId("#btn-focus-map").onclick = guard(() => {
       const prev = document.querySelectorAll("[data-wcag-focus-ring]");
       prev.forEach(el => el.removeAttribute("data-wcag-focus-ring"));
@@ -555,18 +556,18 @@
       `)].filter(el => isElementVisible(el) && el.getAttribute("tabindex") !== "-1");
       tabbables.forEach(el => {
         el.setAttribute("data-wcag-focus-ring", idx++);
-        const r = document.createElement("div");
-        r.textContent = el.getAttribute("data-wcag-focus-ring");
-        Object.assign(r.style, {
+        const tag = document.createElement("div");
+        tag.textContent = el.getAttribute("data-wcag-focus-ring");
+        Object.assign(tag.style, {
           position: "absolute", background: "#000", color: "#fff", borderRadius: "10px",
           padding: "2px 6px", fontSize: "12px", zIndex: "2147483646"
         });
         const b = el.getBoundingClientRect();
-        r.style.left = `${Math.max(0, b.left + window.scrollX)}px`;
-        r.style.top  = `${Math.max(0, b.top + window.scrollY - 18)}px`;
-        r.className = "wcag-focus-tag";
-        document.body.appendChild(r);
-        setTimeout(() => r.remove(), 3000); // ephemeral tag
+        tag.style.left = `${Math.max(0, b.left + window.scrollX)}px`;
+        tag.style.top  = `${Math.max(0, b.top + window.scrollY - 18)}px`;
+        tag.className = "wcag-focus-tag";
+        document.body.appendChild(tag);
+        setTimeout(() => tag.remove(), 3000);
       });
       alert(`Focus map: tagged ${tabbables.length} tabbable elements (numbers fade in ~3s).`);
     }, "Visualize tab focus order across the page.");
@@ -574,17 +575,14 @@
     // Color suggestions (nearest accessible)
     byId("#btn-color-suggest").onclick = guard(() => {
       const firstContrast = issues.find(i => i.rule === "contrast");
-      if (!firstContrast) {
-        alert("No low-contrast items to fix here.");
-        return;
-      }
+      if (!firstContrast) { alert("No low-contrast items to fix here."); return; }
       const el = firstContrast.el;
       const cs = getComputedStyle(el);
       const bg = effectiveBackground(el);
       if (!bg) { alert("Background has image/gradient; skipping."); return; }
       const fg = cs.color;
       const target = isLargeText(cs) ? 3.0 : 4.5;
-      const suggested = nearestAccessibleColor(fg, `rgb(${bg[0]}, ${bg[1]}, ${bg[2]})`, target);
+      const suggested = nearestAccessibleColor(fg, bg, target);
       if (suggested) {
         alert(`Suggested color for "${firstContrast.path}":\n\nCurrent: ${fg}\nSuggested: ${suggested}\nTarget ratio: ${target}:1`);
       } else {
@@ -616,10 +614,7 @@
     })();
   };
 
-  // Mount & initial render
-  document.body.appendChild(overlay);
-
-  // Initial scan AFTER overlay exists (overlay is ignored via data-wcag-ignore)
+  // ---------- initial scan + render ----------
   issues = runAll();
   renderList();
   applyMuteStates();
@@ -651,40 +646,16 @@
     overlay.remove();
   };
 
-  // top panel controls listeners (after DOM is ready)
-  const byId = (sel) => overlay.querySelector(sel); // re-declare here for bundlers without hoist
-  overlay.querySelector("#opt-alt").addEventListener("change", (e) => { options.checkAlt = e.target.checked; issues = runAll(); renderList(); applyMuteStates(); });
-  overlay.querySelector("#opt-labels").addEventListener("change", (e) => { options.checkLabels = e.target.checked; issues = runAll(); renderList(); applyMuteStates(); });
-  overlay.querySelector("#opt-contrast").addEventListener("change", (e) => { options.checkContrast = e.target.checked; issues = runAll(); renderList(); applyMuteStates(); });
-  overlay.querySelector("#opt-interactive").addEventListener("change", (e) => { options.interactiveOnly = e.target.checked; issues = runAll(); renderList(); applyMuteStates(); });
-  overlay.querySelector("#opt-show-muted").addEventListener("change", (e) => { showMuted = e.target.checked; renderList(); });
-
-  // JSON export (duplicate for safety if earlier reference changes)
-  overlay.querySelector("#btn-export").addEventListener("click", () => {
-    const payload = issues
-      .filter(i => showMuted || !mutedEls.has(i.el))
-      .map(i => ({ type: i.type, message: i.msg, path: i.path, wcag: i.wcag }));
-    const blob = new Blob([JSON.stringify({ url: location.href, issues: payload }, null, 2)], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "wcag-checker-report.json";
-    a.click();
-    URL.revokeObjectURL(a.href);
-  });
-
-  // Pro controls & license check
+  // ---------- Pro wiring init ----------
   (async () => {
     await checkLicense();
     wireProControls();
 
-    // If not Pro, visually disable Pro buttons (still clickable → opens modal)
+    // If not Pro, visually dim some buttons (still clickable to open modal)
     if (!IS_PRO) {
-      ["#btn-export-pdf", "#btn-focus-map", "#btn-color-suggest", "#btn-save-ignore", "#btn-clear-ignore"]
-        .forEach(sel => {
-          const b = byId(sel);
-          if (b && sel !== "#btn-export-pdf") b.classList.add("disabled");
-          // Note: export-pdf left enabled so clicking shows the modal (UX hint)
-        });
+      ["#btn-focus-map", "#btn-color-suggest", "#btn-save-ignore", "#btn-clear-ignore"]
+        .forEach(sel => byId(sel)?.classList.add("disabled"));
+      // leave #btn-export-pdf clickable to show modal
     }
   })();
 })();
